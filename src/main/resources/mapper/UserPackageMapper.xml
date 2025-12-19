@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.keeponline.telegram.mapper.UserPackageMapper">
+    <!--查询单个-->
+    <select id="getByAccountIdAndUid" resultType="cn.keeponline.telegram.entity.UserPackage">
+        select * from user_package where account_id = #{accountId} and uid = #{uid}
+    </select>
+
+    <select id="listValidByAccountIdAndStatus" resultType="cn.keeponline.telegram.entity.UserPackage">
+        select * from user_package where account_id = #{accountId}
+        <if test="status != null">
+            and status = #{status}
+        </if>
+        and expire_time > now()
+    </select>
+
+    <select id="listByAccountIdAndStatus" resultType="cn.keeponline.telegram.entity.UserPackage">
+        select * from user_package where account_id = #{accountId}
+        <if test="status != null">
+            and status = #{status}
+        </if>
+    </select>
+
+    <select id="getByIdAndAccountIdAndStatus" resultType="cn.keeponline.telegram.entity.UserPackage">
+        select * from user_package where id = #{id} and account_id = #{accountId}
+        <if test="status != null">
+            and status = #{status}
+        </if>
+    </select>
+
+    <select id="getByUidAndStatus" resultType="cn.keeponline.telegram.entity.UserPackage">
+        select * from user_package
+        where uid = #{uid}
+          and status = #{status}
+        limit 1
+    </select>
+
+    <select id="listByUidsAndStatus" resultType="cn.keeponline.telegram.entity.UserPackage">
+        select * from user_package
+        where uid in
+        <foreach collection="uids"
+                 item="uid"
+                 open="("
+                 separator=","
+                 close=")">
+            #{uid}
+        </foreach>
+          and status = #{status}
+    </select>
+
+    <update id="updateExpire">
+        update user_package set status = 2 where now() > expire_time
+    </update>
+
+    <select id="listExpirePackage" resultType="cn.keeponline.telegram.entity.UserPackage">
+        select * from user_package
+        where now() > expire_time
+        and status != 2
+    </select>
+</mapper>

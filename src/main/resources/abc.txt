@@ -1,0 +1,44 @@
+{
+    "header": {
+        "remoteid": "{gid}",
+        "cvsid": "{gid}",
+        "uid": "{uid}",
+        "status": 1,
+        "cmdtype": "g.gmsg",
+        "opid": 1
+    },
+    "body": {
+        "msg_head": {
+            "cvs_type": 2,
+            "createtime": {createtime},
+            "msgid": "{msgid}",
+            "msg_type": 3,
+            "chat_profiles": {
+            },
+            "is_display": true
+        },
+        "msg_body": {
+            "progress": 1,
+            "localFile": "file:///Users/momemtkes/Library/Application%20Support/yuni-desktop/YuniTemps/{filename}",
+            "width": {width},
+            "height": {height},
+            "filename": "{filename}",
+            "content_type": "image/png",
+            "images": [
+                {
+                    "filename": "{filename}",
+                    "thumb_url": "{thumb_url}",
+                    "preview_url": "{preview_url}",
+                    "origin_url": "{origin_url}",
+                    "full_url": "{full_url}",
+                    "rotate": 0,
+                    "content_type": "image/png",
+                    "width": {width},
+                    "height": {height}
+                }
+            ]
+        }
+    }
+}
+
+{"header":{"remoteid":"{gid}","cvsid":"{gid}","uid":"{uid}","status":1,"cmdtype":"g.gmsg","opid":1},"body":{"msg_head":{"cvs_type":2,"createtime":{createtime},"msgid":"{msgid}","msg_type":3,"chat_profiles":{},"is_display":true},"msg_body":{"progress":1,"localFile":"file:///Users/momemtkes/Library/Application%20Support/yuni-desktop/YuniTemps/{filename}","width":{width},"height":{height},"filename":"{filename}","content_type":"image/png","images":[{"filename":"{filename}","thumb_url":"{thumb_url}","preview_url":"{preview_url}","origin_url":"{origin_url}","full_url":"{full_url}","rotate":0,"content_type":"image/png","width":{width},"height":{height}}]}}}

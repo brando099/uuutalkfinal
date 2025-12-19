@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.keeponline.telegram.mapper.UserMapper">
+    <select id="listUsers" resultType="cn.keeponline.telegram.entity.User">
+        select *
+        from user
+        <where>
+            <if test="userId != null and userId != ''">
+                user_id like concat('%', #{userId}, '%') or username like concat('%', #{userId}, '%')
+            </if>
+        </where>
+        order by create_time desc
+    </select>
+</mapper>

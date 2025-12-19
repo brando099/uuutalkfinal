@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.keeponline.telegram.mapper.SysUserMapper">
+
+    <resultMap id="BaseResultMap" type="cn.keeponline.telegram.entity.SysUser">
+        <!--@Table sys_user-->
+        <result property="id" column="id" jdbcType="OTHER"/>
+        <result property="outId" column="out_id" jdbcType="INTEGER"/>
+        <result property="username" column="username" jdbcType="VARCHAR"/>
+        <result property="password" column="password" jdbcType="VARCHAR"/>
+        <result property="status" column="status" jdbcType="OTHER"/>
+        <result property="secretKey" column="secret_key" jdbcType="VARCHAR"/>
+        <result property="googleAuthEnabled" column="google_auth_enabled" jdbcType="BOOLEAN"/>
+        <result property="creatTime" column="create_time" jdbcType="TIMESTAMP"/>
+        <result property="modifyTime" column="modify_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!--查询单个-->
+    <select id="queryById" resultMap="BaseResultMap">
+        select
+          id, out_id, username, password, status, secret_key, google_auth_enabled, create_time, modify_time
+        from sys_user
+        where id = #{id}
+    </select>
+
+    <!--查询单个-->
+    <select id="getByOutId" resultMap="BaseResultMap">
+        select
+            id, out_id, username, password, status, secret_key, google_auth_enabled, create_time, modify_time
+        from sys_user
+        where out_id = #{outId}
+    </select>
+
+    <!--查询指定行数据-->
+    <select id="queryAllByLimit" resultMap="BaseResultMap">
+        select
+          id, out_id, username, password, status, secret_key, google_auth_enabled, create_time, modify_time
+        from sys_user
+        limit #{offset}, #{limit}
+    </select>
+
+    <!--通过实体作为筛选条件查询-->
+    <select id="queryAll" resultMap="BaseResultMap">
+        select
+          id, out_id, username, password, status, secret_key, google_auth_enabled, gmt_created, gmt_modified
+        from sys_user
+        <where>
+            <if test="id != null">
+                and id = #{id}
+            </if>
+            <if test="outId != null">
+                and out_id = #{outId}
+            </if>
+            <if test="username != null and username != ''">
+                and username = #{username}
+            </if>
+            <if test="password != null and password != ''">
+                and password = #{password}
+            </if>
+            <if test="status != null">
+                and status = #{status}
+            </if>
+            <if test="secretKey != null and secretKey != ''">
+                and secret_key = #{secretKey}
+            </if>
+            <if test="googleAuthEnabled != null and googleAuthEnabled != ''">
+                and google_auth_enabled = #{googleAuthEnabled}
+            </if>
+            <if test="gmtCreated != null">
+                and gmt_created = #{gmtCreated}
+            </if>
+            <if test="gmtModified != null">
+                and gmt_modified = #{gmtModified}
+            </if>
+        </where>
+    </select>
+
+    <!--通过实体作为筛选条件查询-->
+    <select id="list" resultMap="BaseResultMap">
+        select
+        id, out_id, username, password, status, secret_key, google_auth_enabled, gmt_created, gmt_modified
+        from sys_user
+        <where>
+            <if test="username != null and username != ''">
+                and username = #{username}
+            </if>
+        </where>
+    </select>
+
+    <!--通过实体作为筛选条件查询-->
+    <select id="queryOne" resultMap="BaseResultMap">
+        select
+        id, out_id, username, password, status, secret_key, google_auth_enabled, create_time, modify_time
+        from sys_user
+        <where>
+            <if test="id != null">
+                and id = #{id}
+            </if>
+            <if test="outId != null">
+                and out_id = #{outId}
+            </if>
+            <if test="username != null and username != ''">
+                and username = #{username}
+            </if>
+            <if test="password != null and password != ''">
+                and password = #{password}
+            </if>
+            <if test="status != null">
+                and status = #{status}
+            </if>
+            <if test="secretKey != null and secretKey != ''">
+                and secret_key = #{secretKey}
+            </if>
+            <if test="googleAuthEnabled != null and googleAuthEnabled != ''">
+                and google_auth_enabled = #{googleAuthEnabled}
+            </if>
+        </where>
+        limit 0, 1
+    </select>
+
+
+    <!--通过主键修改数据-->
+    <update id="update">
+        update sys_user
+        <set>
+            <if test="outId != null">
+                out_id = #{outId},
+            </if>
+            <if test="username != null and username != ''">
+                username = #{username},
+            </if>
+            <if test="password != null and password != ''">
+                password = #{password},
+            </if>
+            <if test="status != null">
+                status = #{status},
+            </if>
+            <if test="secretKey != null and secretKey != ''">
+                secret_key = #{secretKey},
+            </if>
+            <if test="googleAuthEnabled != null and googleAuthEnabled != ''">
+                google_auth_enabled = #{googleAuthEnabled},
+            </if>
+            <if test="gmtCreated != null">
+                gmt_created = #{gmtCreated},
+            </if>
+            <if test="gmtModified != null">
+                gmt_modified = #{gmtModified},
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <!--通过主键删除-->
+    <delete id="deleteById">
+        delete from sys_user where id = #{id}
+    </delete>
+
+    <!--通过主键修改数据-->
+    <update id="cleanGoogleAuth">
+        update sys_user set secret_key = '', google_auth_enabled = false where id = #{id}
+    </update>
+
+</mapper>

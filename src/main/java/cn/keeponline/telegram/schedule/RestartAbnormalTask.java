@@ -1,0 +1,108 @@
+package cn.keeponline.telegram.schedule;
+
+import cn.hutool.core.util.StrUtil;
+import cn.keeponline.telegram.entity.UserPackage;
+import cn.keeponline.telegram.entity.UserTask;
+import cn.keeponline.telegram.mapper.SendRecordMapper;
+import cn.keeponline.telegram.mapper.UserPackageMapper;
+import cn.keeponline.telegram.mapper.UserTaskMapper;
+import cn.keeponline.telegram.service.TaskService;
+import lombok.extern.slf4j.Slf4j;
+import okhttp3.WebSocket;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import static cn.keeponline.telegram.service.impl.TaskServiceImpl.WebSocketMap;
+
+@Component
+@Slf4j
+public class RestartAbnormalTask {
+
+    @Autowired
+    private UserTaskMapper userTaskMapper;
+
+    @Autowired
+    private TaskService taskService;
+
+    @Autowired
+    private SendRecordMapper sendRecordMapper;
+
+    @Autowired
+    private UserPackageMapper userPackageMapper;
+
+    @Scheduled(cron = "0 0/3 * * * ?")
+    public void restartAbnormalTask() throws Exception {
+        log.info("重启异常的任务开始执行");
+        List<UserTask> userTasks = userTaskMapper.getByStatus(0);
+        log.info("需要重启的任务数量: {}", userTasks.size());
+        for (UserTask userTask : userTasks) {
+            try {
+                WebSocket webSocket = WebSocketMap.get(userTask.getUid());
+                if (webSocket != null) {
+                    userTask.setStatus(1);
+                    userTaskMapper.updateById(userTask);
+                }
+                taskService.asyncRestartTask(userTask);
+            } catch (Exception e) {
+                log.error("重启任务失败", e);
+            }
+            Thread.sleep(2000);
+        }
+    }
+
+    @Scheduled(cron = "0 0/2 * * * ?")
+    public void sendPing() throws InterruptedException {
+        log.info("sendPing任务开始执行");
+        Map<String, WebSocket> webSocketMap = WebSocketMap;
+        log.info("socket数量: {}", webSocketMap.size());
+        for (String uid : webSocketMap.keySet()) {
+            WebSocket ws = webSocketMap.get(uid);
+            String pingMsg = """
+                    {"header":{"sm":1,"ver":10,"uid":"{uid}","cmdtype":"g.ping"},"body":{"uid":"{uid}","timestamp":{timestamp}}}
+                    """
+                    .replace("{uid}", uid)
+                    .replace("{timestamp}", new Date().getTime() / 1000 + "");
+            ws.send(pingMsg);
+            Thread.sleep(500L);
+        }
+    }
+
+    @Scheduled(cron = "0 0 * * * ?")
+    public void deleteSendRecord()  {
+        log.info("deleteSendRecord任务开始执行");
+        String createTime = LocalDateTime.now().minusHours(2).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        int count = sendRecordMapper.deleteSendRecord(createTime);
+        log.info("删除发送记录数量: {}", count);
+    }
+
+    @Scheduled(cron = "0 0 0 * * ?")
+    public void updateExpire()  {
+        log.info("updateExpire任务开始执行");
+        List<UserPackage> userPackages = userPackageMapper.listExpirePackage();
+        for (UserPackage userPackage : userPackages) {
+            String uid = userPackage.getUid();
+            if (StrUtil.isBlank(uid)) {
+                continue;
+            }
+            List<UserTask> userTasks = userTaskMapper.listByUid(uid);
+            for (UserTask userTask : userTasks) {
+                if (userTaskMapper.deleteById(userTask.getId()) == 1) {
+                    log.info("套餐到期删除用户任务成功: {}", userTask);
+                }
+            }
+            userPackage.setStatus(2);
+            if (userPackageMapper.updateById(userPackage) == 1) {
+                log.info("套餐过期修改套餐状态成功: {}", userPackage);
+            }
+        }
+
+        log.info("处理过期套餐数量: {}", userPackages.size());
+    }
+}
