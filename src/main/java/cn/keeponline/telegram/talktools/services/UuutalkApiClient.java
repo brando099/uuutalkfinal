@@ -8,6 +8,9 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -30,6 +33,7 @@ public class UuutalkApiClient {
     // WASM 签名器
     private WasmSigner wasmSigner;
 
+
     public UuutalkApiClient() {
         this(new UuutalkConfig());
     }
@@ -45,7 +49,7 @@ public class UuutalkApiClient {
         if (config.getClientUuid() == null || config.getClientUuid().isEmpty()) {
             config.setClientUuid(UUID.randomUUID().toString());
         }
-        
+
         // 初始化 WASM 签名器（延迟初始化）
         wasmSigner = new WasmSigner();
     }
@@ -321,6 +325,66 @@ public class UuutalkApiClient {
     private void printQrConsole(String url) {
         logger.info("控制台输出二维码，请扫码: {}", url);
         // TODO: 使用 ZXing 生成二维码并打印到控制台
+    }
+
+    /**
+     * 获取 OSS STS 临时凭证（用于直传/分片上传等）
+     * GET /v1/file/sts
+     */
+    public Map<String, Object> getFileSts(String token) throws IOException {
+        String path = "/file/sts";
+
+        // 生成签名头（x-timestamp/x-nonce/x-signature 等）
+        Map<String, String> headers = buildHeaders("GET", path, null, null, token);
+
+        // 补充抓包里出现但对签名无影响的头（可选）
+        headers.putIfAbsent("x-package", "com.uuutalk.im");
+
+        Request request = new Request.Builder()
+                .url(BASE_URL + path)
+                .headers(Headers.of(headers))
+                .get()
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new IOException("Unexpected code " + response);
+            }
+
+            String body = response.body() != null ? response.body().string() : "{}";
+            Map<String, Object> data = objectMapper.readValue(body, Map.class);
+
+            // 方便调用方判断是否过期：把 ISO8601 的 expiration 解析成时间戳（秒）
+            // 示例: 2025-12-16T10:42:36Z
+            Object expObj = data.get("expiration");
+            if (expObj != null) {
+                String exp = String.valueOf(expObj);
+                Long expTs = tryParseIsoToEpochSeconds(exp);
+                if (expTs != null) {
+                    data.put("expiration_ts", expTs);
+                }
+            }
+            return data;
+        }
+    }
+
+    private Long tryParseIsoToEpochSeconds(String iso) {
+        if (iso == null || iso.isEmpty()) return null;
+
+        // 常见情况：以 Z 结尾（UTC）
+        try {
+            Instant instant = Instant.parse(iso);
+            return instant.getEpochSecond();
+        } catch (DateTimeParseException ignore) {
+            // fallback：带偏移的格式，如 2025-12-16T10:42:36+00:00
+        }
+
+        try {
+            OffsetDateTime odt = OffsetDateTime.parse(iso);
+            return odt.toInstant().getEpochSecond();
+        } catch (DateTimeParseException ignore) {
+            return null;
+        }
     }
 }
 
