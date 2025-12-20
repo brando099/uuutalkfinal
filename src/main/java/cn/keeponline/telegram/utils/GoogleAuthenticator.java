@@ -1,7 +1,7 @@
 package cn.keeponline.telegram.utils;
 
-import org.apache.commons.codec.binary.Base32;
-import org.apache.commons.codec.binary.Base64;
+//import org.apache.commons.codec.binary.Base32;
+//import org.apache.commons.codec.binary.Base64;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -46,18 +46,18 @@ public class GoogleAuthenticator {
      * @return secret key
      */
     public static String generateSecretKey() {
-        SecureRandom sr = null;
-        try {
-            sr = SecureRandom.getInstance(RANDOM_NUMBER_ALGORITHM);
-            sr.setSeed(Base64.decodeBase64(SEED));
-            byte[] buffer = sr.generateSeed(SECRET_SIZE);
-            Base32 codec = new Base32();
-            byte[] bEncodedKey = codec.encode(buffer);
-            String encodedKey = new String(bEncodedKey);
-            return encodedKey;
-        } catch (NoSuchAlgorithmException e) {
-            // should never occur... configuration error
-        }
+//        SecureRandom sr = null;
+//        try {
+//            sr = SecureRandom.getInstance(RANDOM_NUMBER_ALGORITHM);
+//            sr.setSeed(Base64.decodeBase64(SEED));
+//            byte[] buffer = sr.generateSeed(SECRET_SIZE);
+//            Base32 codec = new Base32();
+//            byte[] bEncodedKey = codec.encode(buffer);
+//            String encodedKey = new String(bEncodedKey);
+//            return encodedKey;
+//        } catch (NoSuchAlgorithmException e) {
+//            // should never occur... configuration error
+//        }
         return null;
     }
 
@@ -107,29 +107,29 @@ public class GoogleAuthenticator {
      * @return
      */
     public boolean checkCode(String secret, long code, long timeMsec) {
-        Base32 codec = new Base32();
-        byte[] decodedKey = codec.decode(secret);
-        // convert unix msec time into a 30 second "window"
-        // this is per the TOTP spec (see the RFC for details)
-        long t = (timeMsec / 1000L) / 30L;
-        // Window is used to check codes generated in the near past.
-        // You can use this value to tune how far you're willing to go.
-        for (int i = - windowSize; i <= windowSize; ++i) {
-            long hash;
-            try {
-                hash = verifyCode(decodedKey, t + i);
-            } catch (Exception e) {
-                // Yes, this is bad form - but
-                // the exceptions thrown would be rare and a static
-                // configuration problem
-                e.printStackTrace();
-                throw new RuntimeException(e.getMessage());
-                // return false;
-            }
-            if (hash == code) {
-                return true;
-            }
-        }
+//        Base32 codec = new Base32();
+//        byte[] decodedKey = codec.decode(secret);
+//        // convert unix msec time into a 30 second "window"
+//        // this is per the TOTP spec (see the RFC for details)
+//        long t = (timeMsec / 1000L) / 30L;
+//        // Window is used to check codes generated in the near past.
+//        // You can use this value to tune how far you're willing to go.
+//        for (int i = - windowSize; i <= windowSize; ++i) {
+//            long hash;
+//            try {
+//                hash = verifyCode(decodedKey, t + i);
+//            } catch (Exception e) {
+//                // Yes, this is bad form - but
+//                // the exceptions thrown would be rare and a static
+//                // configuration problem
+//                e.printStackTrace();
+//                throw new RuntimeException(e.getMessage());
+//                // return false;
+//            }
+//            if (hash == code) {
+//                return true;
+//            }
+//        }
         // The validation code is invalid.
         return false;
     }

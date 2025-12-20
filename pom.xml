@@ -19,9 +19,9 @@
         <java.version>15</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <guava.version>30.0-jre</guava.version>
-        <lombok.version>1.18.10</lombok.version>
-        <mysql.version>8.0.17</mysql.version>
-<!--        <spring.boot.version>2.2.5.RELEASE</spring.boot.version>-->
+        <lombok.version>1.18.32</lombok.version>
+        <mysql.version>8.0.33</mysql.version>
+        <!--        <spring.boot.version>2.2.5.RELEASE</spring.boot.version>-->
         <spring.nacos.version>2.1.1.RELEASE</spring.nacos.version>
         <seata.version>1.1.0</seata.version>
         <sentinel.version>1.7.1</sentinel.version>
@@ -35,6 +35,7 @@
         <swagger.version>3.0.0</swagger.version>
         <rocketmq.spring.boot.version>2.0.4</rocketmq.spring.boot.version>
         <hutool-all.version>5.7.2</hutool-all.version>
+        <bouncycastle.version>1.78</bouncycastle.version>
 
     </properties>
 
@@ -48,6 +49,24 @@
                     <artifactId>spring-boot-starter-logging</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>io.github.kawamuray.wasmtime</groupId>
+            <artifactId>wasmtime-java</artifactId>
+            <version>0.11.0</version>
+        </dependency>
+
+        <!-- 加密库: BouncyCastle -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>${bouncycastle.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>${bouncycastle.version}</version>
         </dependency>
 
         <dependency>
@@ -68,21 +87,23 @@
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>druid-spring-boot-starter</artifactId>
-            <version>1.1.20</version>
+            <version>1.2.23</version>
         </dependency>
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.shardingsphere</groupId>
-            <artifactId>sharding-jdbc-spring-boot-starter</artifactId>
-            <version>4.0.0-RC1</version>
+            <version>${mysql.version}</version>
         </dependency>
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-boot-starter</artifactId>
             <version>3.0.5</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
         </dependency>
 
         <dependency>
@@ -170,11 +191,11 @@
             <version>1.4.2.Final</version>
         </dependency>
 
-<!--        <dependency>-->
-<!--            <groupId>org.apache.rocketmq</groupId>-->
-<!--            <artifactId>rocketmq-client-java</artifactId>-->
-<!--            <version>5.0.5</version>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.apache.rocketmq</groupId>-->
+        <!--            <artifactId>rocketmq-client-java</artifactId>-->
+        <!--            <version>5.0.5</version>-->
+        <!--        </dependency>-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>

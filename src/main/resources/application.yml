@@ -16,30 +16,13 @@ spring:
   main:
     allow-bean-definition-overriding: true
     allow-circular-references: true
-  shardingsphere:
-    props:
-      sql:
-        show: false
-    datasource:
-      names: m1
-      m1:
-        type: com.alibaba.druid.pool.DruidDataSource
-        driver-class-name: com.mysql.cj.jdbc.Driver
-        url: jdbc:mysql://localhost:3306/yuni?serverTimezone=GMT%2B8
-#        url: jdbc:mysql://7.me:3306/capital_allocation_mdb?serverTimezone=GMT%2B8
-        username: root
-        password: root
-    sharding:
-      tables:
-        message:
-          actual-data-nodes: m1.message_$->{0..99}
-          key-generator:
-            column: id
-            type: SNOWFLAKE
-          table-strategy:
-            inline:
-              sharding-column: user_id
-              algorithm-expression: message_$->{user_id % 100}
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/yuni?serverTimezone=GMT%2B8
+    #    url: jdbc:mysql://7.me:3306/capital_allocation_mdb?serverTimezone=GMT%2B8
+    username: root
+    password: root
 project:
   swagger-ui-open: true
   workerId: 0
