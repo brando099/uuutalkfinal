@@ -18,4 +18,6 @@ public class AddBatchTaskInput {
     private String messageContent;
 
     private MultipartFile file;
+
+    private Integer cvsType;
 }

@@ -1,5 +1,6 @@
 package cn.keeponline.telegram.component;
 
+import cn.keeponline.telegram.dto.uuudto.UUUFriendDTO;
 import cn.keeponline.telegram.dto.uuudto.UUUGroupDTO;
 import cn.keeponline.telegram.entity.SendRecord;
 import cn.keeponline.telegram.entity.UserInfo;
@@ -58,7 +59,7 @@ public class AsyncComponent {
                 String nickname = authMap.get("name");
                 String username = authMap.get("username");
                 List<UUUGroupDTO> groups = uuutalkApiClient.getGroups(token);
-                List friends = uuutalkApiClient.getFriends(token);
+                List<UUUFriendDTO> friends = uuutalkApiClient.getFriends(token);
                 log.info("groups: {}", JSON.toJSONString(groups));
                 log.info("friends: {}", JSON.toJSONString(friends));
                 int groupSize = groups.size();
@@ -127,7 +128,7 @@ public class AsyncComponent {
                 continue;
             }
             String token = user.getToken();
-            List friends = uuutalkApiClient.getFriends(token);
+            List<UUUFriendDTO> friends = uuutalkApiClient.getFriends(token);
 //            String result = SendMessage.getGroupListCheck(uid, token);
             if (friends == null) {
                 log.info("账号异常");
@@ -140,7 +141,7 @@ public class AsyncComponent {
 
 //            List<FriendDTO> friendList = SendMessage.getFriendList(uid, token);
             user.setGroupSize(uuutalkApiClient.getGroups(token).size());
-            user.setFriendSize(uuutalkApiClient.getFriends(token).size());
+            user.setFriendSize(friends.size() - 2);
             userInfoMapper.updateById(user);
         }
     }

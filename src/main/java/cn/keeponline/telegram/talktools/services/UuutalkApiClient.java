@@ -2,6 +2,7 @@ package cn.keeponline.telegram.talktools.services;
 
 import cn.hutool.Hutool;
 import cn.hutool.http.HttpUtil;
+import cn.keeponline.telegram.dto.uuudto.UUUFriendDTO;
 import cn.keeponline.telegram.dto.uuudto.UUUGroupDTO;
 import cn.keeponline.telegram.dto.uuudto.UUUGroupVO;
 import cn.keeponline.telegram.exception.BizzRuntimeException;
@@ -250,7 +251,7 @@ public class UuutalkApiClient {
     }
 
 
-    public List getFriends(String token) throws IOException {
+    public List<UUUFriendDTO> getFriends(String token) throws IOException {
         String path = "/friend/sync";
         Map<String, String> params = new LinkedHashMap<>();
         params.put("version", "");
@@ -274,7 +275,9 @@ public class UuutalkApiClient {
             if (!response.isSuccessful()) {
                 return null;
             }
-            return objectMapper.readValue(response.body().string(), List.class);
+            String string = response.body().string();
+            return JSON.parseArray(string, UUUFriendDTO.class);
+//            return objectMapper.readValue(response.body().string(), List.class);
         }
     }
 

@@ -21,6 +21,4 @@ public class AddTaskInput {
 
     @NotNull(message = "cvsType不能为空")
     private Integer cvsType;
-
-
 }

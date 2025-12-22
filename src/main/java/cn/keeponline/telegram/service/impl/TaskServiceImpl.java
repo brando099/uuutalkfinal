@@ -94,6 +94,9 @@ public class TaskServiceImpl implements TaskService {
     @Override
     @Async("asyncTaskExecutor")
     public void addBatch(AddBatchTaskInput addBatchTaskInput) throws Exception {
+        Integer sendInterval = addBatchTaskInput.getSendInterval() * 1000;
+        String messageContent = addBatchTaskInput.getMessageContent();
+        Integer cvsType = addBatchTaskInput.getCvsType();
         List<String> uids = addBatchTaskInput.getUids();
         if (uids.isEmpty()) {
             return;
@@ -103,25 +106,23 @@ public class TaskServiceImpl implements TaskService {
             return;
         }
         // 删除这些uid的所有群组任务
-        int delCount = userTaskMapper.deleteByUidsAndCvsType(uids, 2);
+        int delCount = userTaskMapper.deleteByUidsAndCvsType(uids, cvsType);
         log.info("删除任务数量: {}", delCount);
 
         UserInfo userInfo = userInfos.get(0);
         String uid = userInfo.getUid();
         String token = userInfo.getToken();
-        Integer sendInterval = addBatchTaskInput.getSendInterval() * 1000;
-        String messageContent = addBatchTaskInput.getMessageContent();
+
         UserTask userTask = new UserTask();
         userTask.setAccountId(userInfo.getAccountId());
         userTask.setStatus(1);
         userTask.setSendInterval(sendInterval);
         userTask.setMessageContent(messageContent);
-        userTask.setCvsType(2);
+        userTask.setCvsType(cvsType);
         userTask.setType(1);
         MultipartFile file = addBatchTaskInput.getFile();
         if (file != null) {
             String md5 = DigestUtils.md5DigestAsHex(file.getInputStream());
-            String file_name = UUID.randomUUID() + ".png";
             long size = file.getSize();
             String path = System.getProperty("user.home") + "/yunipicture";
             File uploadDir = new File(path);
@@ -199,6 +200,9 @@ public class TaskServiceImpl implements TaskService {
         } else {
             List<UUUFriendDTO> friends = uuutalkApiClient.getFriends(token);
             for (UUUFriendDTO friend : friends) {
+                if (friend.getUid().equals("u_10000") || friend.getUid().equals("fileHelper")) {
+                    continue;
+                }
                 SendGeneralDTO sendGeneralDTO = new SendGeneralDTO();
                 sendGeneralDTO.setId(friend.getUid());
                 sendGeneralDTO.setName(friend.getName());
