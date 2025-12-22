@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.net.URI;
 
 /**
  * WASM 签名器
@@ -46,9 +47,32 @@ public class WasmSigner {
                 throw new RuntimeException("WASM 文件不存在: " + WASM_FILE_NAME);
             }
             
-            // 创建 Engine 和 Store
-            engine = new Engine();
-            store = new Store<>(null, engine);
+            // 创建 Engine 和 Store（这里可能会触发 JNI 库加载）
+            try {
+                engine = new Engine();
+                store = new Store<>(null, engine);
+            } catch (UnsatisfiedLinkError e) {
+                // 检查是否是 GLIBC 版本问题
+                String errorMsg = e.getMessage();
+                if (errorMsg != null && errorMsg.contains("GLIBC")) {
+                    String requiredVersion = extractRequiredGlibcVersion(errorMsg);
+                    String friendlyError = String.format(
+                        "WASM 初始化失败：系统 GLIBC 版本不兼容。\n" +
+                        "当前系统可能缺少 GLIBC %s 或更高版本。\n" +
+                        "错误详情: %s\n" +
+                        "解决方案：\n" +
+                        "1. 升级系统 GLIBC（不推荐，可能影响系统稳定性）\n" +
+                        "2. 使用 Docker 容器运行（推荐）：使用包含 GLIBC 2.25+ 的基础镜像（如 Ubuntu 18.04+, CentOS 8+, Debian 10+）\n" +
+                        "3. 在更高版本的 Linux 发行版上运行",
+                        requiredVersion != null ? requiredVersion : "2.25",
+                        errorMsg
+                    );
+                    logger.error(friendlyError);
+                    throw new RuntimeException(friendlyError, e);
+                }
+                // 其他 UnsatisfiedLinkError
+                throw new RuntimeException("WASM 初始化失败：无法加载本地库。请检查系统依赖是否完整。", e);
+            }
             
             // 加载 WASM 模块
             byte[] wasmBytes = Files.readAllBytes(wasmPath);
@@ -103,18 +127,52 @@ public class WasmSigner {
     }
     
     /**
+     * 从错误信息中提取所需的 GLIBC 版本
+     */
+    private String extractRequiredGlibcVersion(String errorMsg) {
+        if (errorMsg == null) {
+            return null;
+        }
+        // 匹配类似 "version `GLIBC_2.25'" 的模式
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("GLIBC_([0-9]+\\.[0-9]+)");
+        java.util.regex.Matcher matcher = pattern.matcher(errorMsg);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return null;
+    }
+    
+    /**
      * 查找 WASM 文件路径
      */
     private Path findWasmFile() {
-        // 1. 从 resources 目录查找
-        InputStream is = getClass().getResourceAsStream("/assets/" + WASM_FILE_NAME);
-        if (is != null) {
-            try {
-                is.close();
-                return Paths.get(getClass().getResource("/assets/" + WASM_FILE_NAME).toURI());
-            } catch (Exception e) {
-                logger.warn("无法从 resources 加载 WASM 文件", e);
+        // 1. 从 resources 目录查找（支持 jar 包内资源）
+        try (InputStream is = getClass().getResourceAsStream("/assets/" + WASM_FILE_NAME)) {
+            if (is != null) {
+                try {
+                    URI resourceUri = getClass().getResource("/assets/" + WASM_FILE_NAME).toURI();
+                    
+                    // 如果是 jar 包内的资源（jar:file:...），需要提取到临时文件
+                    if (resourceUri.getScheme().equals("jar")) {
+                        // 提取到临时文件
+                        Path tempFile = Files.createTempFile("wasm_", "_" + WASM_FILE_NAME);
+                        tempFile.toFile().deleteOnExit(); // JVM 退出时删除临时文件
+                        
+                        // 从 InputStream 复制到临时文件
+                        Files.copy(is, tempFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        
+                        logger.info("从 jar 包内提取 WASM 文件到临时目录: {}", tempFile);
+                        return tempFile;
+                    } else {
+                        // 普通文件系统路径，直接返回
+                        return Paths.get(resourceUri);
+                    }
+                } catch (Exception e) {
+                    logger.warn("无法从 resources 加载 WASM 文件", e);
+                }
             }
+        } catch (Exception e) {
+            logger.warn("无法打开 resources 流", e);
         }
         
         // 2. 从项目根目录的 assets 目录查找

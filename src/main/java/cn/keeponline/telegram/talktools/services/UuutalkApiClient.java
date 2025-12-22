@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class UuutalkApiClient {
     private static final Logger logger = Logging.getLogger(UuutalkApiClient.class);
-    private static final String BASE_URL = "https://apii.uuutalk.cc/v1";
+    public static String BASE_URL = "https://api.uutalk.co/v1";
     private static final String WEB_ORIGIN = "https://web.uuutalk.co";
 
     private final UuutalkConfig config;

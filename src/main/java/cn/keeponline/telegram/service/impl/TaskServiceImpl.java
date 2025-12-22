@@ -91,6 +91,9 @@ public class TaskServiceImpl implements TaskService {
     @Autowired
     private AsyncComponent asyncComponent;
 
+    @Autowired
+    private UUTalkClient uuTalkClient;
+
     @Override
     @Async("asyncTaskExecutor")
     public void addBatch(AddBatchTaskInput addBatchTaskInput) throws Exception {
@@ -175,7 +178,7 @@ public class TaskServiceImpl implements TaskService {
 //            return;
 //        }
 //        String accessToken = wssInfo.getJSONObject("data").getString("access_token");
-        WebSocketWrapper ws = UUTalkClient.runWsClient(uid, token);
+        WebSocketWrapper ws = uuTalkClient.runWsClient(uid, token);
         uuuSocketMap.put(uid, ws);
         statusMap.put(uid, 1);
         // 等待一下，让ws把状态修改过来

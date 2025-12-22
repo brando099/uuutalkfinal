@@ -1,31 +1,38 @@
 package cn.keeponline.telegram.talktools.uutalk;
 
+import cn.keeponline.telegram.entity.UserTask;
+import cn.keeponline.telegram.mapper.UserTaskMapper;
 import cn.keeponline.telegram.talktools.config.UUTalkGlobalConfig;
 import cn.keeponline.telegram.talktools.core.*;
 import cn.keeponline.telegram.talktools.handler.UUTalkOnMessage;
 import cn.keeponline.telegram.talktools.logging.Logging;
 import cn.keeponline.telegram.talktools.ws.ShareManager;
-import cn.keeponline.telegram.talktools.ws.UUTalkWsCore;
 import cn.keeponline.telegram.talktools.ws.WebSocketWrapper;
+import com.alibaba.fastjson2.JSON;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Headers;
 import org.bouncycastle.crypto.params.X25519PrivateKeyParameters;
 import org.bouncycastle.crypto.params.X25519PublicKeyParameters;
 import org.slf4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
+import static cn.keeponline.telegram.service.impl.TaskServiceImpl.statusMap;
 import static cn.keeponline.telegram.service.impl.TaskServiceImpl.uuuSocketMap;
 
 /**
  * UUTalk WebSocket 客户端
  */
 @Slf4j
+@Component
 public class UUTalkClient {
+
+    @Autowired
+    private UserTaskMapper userTaskMapper;
+
     private static final Logger logger = Logging.getLogger(UUTalkClient.class);
     private static final String WS_URL = "wss://ws.uuutalk.cc/";
     private static final UUTalkGlobalConfig GLOBAL_CONFIG = new UUTalkGlobalConfig();
@@ -69,7 +76,7 @@ public class UUTalkClient {
     /**
      * 启动 WebSocket 客户端
      */
-    public static WebSocketWrapper runWsClient(String uid, String token) {
+    public WebSocketWrapper runWsClient(String uid, String token) {
         WebSocketWrapper webSocketWrapper = uuuSocketMap.get(uid);
         if (webSocketWrapper != null) {
             return webSocketWrapper;
@@ -128,27 +135,22 @@ public class UUTalkClient {
         // 消息处理
         ws.onMessage(data -> UUTalkOnMessage.onPacket(data, ws));
         ws.onError(error -> logger.error("WS 出错", error));
-        ws.onClose((code, reason) -> logger.info("WS 连接关闭: {} {}", code, reason));
+        ws.onClose((code, reason) -> {
+            logger.info("WS 连接关闭: {} {}", code, reason);
+            uuuSocketMap.remove(uid);
+            List<UserTask> userTasks = userTaskMapper.listByUidAndStatus(uid, 1);
+            for (UserTask userTask : userTasks) {
+                userTask.setStatus(0);
+                if (userTaskMapper.updateById(userTask) == 1) {
+                    log.info("断开连接，修改任务状态成功: {}", JSON.toJSONString(userTask));
+                }
+                statusMap.put(uid, 0);
+            }
 
+        });
         // 连接
         ws.connect();
-
-        // 等待 AES ready
-//        logger.info("等待 AES 准备好...");
-//        while (!ShareManager.aesReady) {
-//            try {
-//                Thread.sleep(2000);
-//            } catch (InterruptedException e) {
-//                Thread.currentThread().interrupt();
-//                return ws;
-//            }
-//        }
-
-//        System.out.println(("AES 已准备好，可随时发送消息"));
-//        boolean b = UUTalkWsCore.sendPictureMessage(ws, "file/preview/chat/2/d88d5141821740aeaa6366776f95dd50/1a3ba617f3384eb2978255a27ecdb7b7.png", "b6e2232835024a3bbf97742d44ee1f97", 2);
-//        System.out.println("发送结果" + b);
         return ws;
-
     }
 
     private static String bytesToHex(byte[] bytes) {

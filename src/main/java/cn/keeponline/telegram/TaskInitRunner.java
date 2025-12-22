@@ -1,8 +1,11 @@
 package cn.keeponline.telegram;
 
+import cn.keeponline.telegram.entity.SystemConfigs;
 import cn.keeponline.telegram.entity.UserTask;
+import cn.keeponline.telegram.mapper.SystemConfigsMapper;
 import cn.keeponline.telegram.mapper.UserTaskMapper;
 import cn.keeponline.telegram.service.TaskService;
+import cn.keeponline.telegram.talktools.services.UuutalkApiClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +26,9 @@ public class TaskInitRunner implements ApplicationRunner {
     @Autowired
     private TaskService taskService;
 
+    @Autowired
+    private SystemConfigsMapper systemConfigsMapper;
+
     @Override
     public void run(ApplicationArguments args) throws Exception {
         List<UserTask> userTasks = userTaskMapper.getByStatus(1);
@@ -30,5 +36,7 @@ public class TaskInitRunner implements ApplicationRunner {
         for (UserTask userTask : userTasks) {
             taskService.asyncRestartTask(userTask);
         }
+        SystemConfigs systemConfigs = systemConfigsMapper.getByKey("api_address");
+        UuutalkApiClient.BASE_URL = systemConfigs.getValue();
     }
 }
