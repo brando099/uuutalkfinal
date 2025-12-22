@@ -1,11 +1,14 @@
 package cn.keeponline.telegram.talktools.ws;
 
+import lombok.Data;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * WebSocket 共享管理器
  * 存储会话级状态
  */
+@Data
 public class ShareManager {
     public static final int PROTO_VERSION = 3;
     public static final String CLIENT_VERSION = "1.0.0";
@@ -14,9 +17,9 @@ public class ShareManager {
     public static byte[] DH_PRIVATE_KEY_BYTES = new byte[32]; // 需要初始化
 
     // 会话级 AES 状态
-    public static String aesKey = null;
-    public static String aesIv = null;
-    public static boolean aesReady = false;
+    public String aesKey = null;
+    public String aesIv = null;
+    public boolean aesReady = false;
 
     // WS 心跳配置
     public static long pingTime = 0;

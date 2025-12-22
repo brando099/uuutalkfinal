@@ -4,12 +4,14 @@ import cn.keeponline.telegram.dto.FriendDTO;
 import cn.keeponline.telegram.dto.GroupDTO;
 import cn.keeponline.telegram.dto.GroupInfo;
 import cn.keeponline.telegram.dto.YResponse;
+import cn.keeponline.telegram.dto.uuudto.UUUGroupDTO;
 import cn.keeponline.telegram.entity.SendRecord;
 import cn.keeponline.telegram.entity.UserInfo;
 import cn.keeponline.telegram.entity.UserPackage;
 import cn.keeponline.telegram.mapper.SendRecordMapper;
 import cn.keeponline.telegram.mapper.UserInfoMapper;
 import cn.keeponline.telegram.mapper.UserPackageMapper;
+import cn.keeponline.telegram.talktools.services.UuutalkApiClient;
 import cn.keeponline.telegram.test.SendMessage;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
@@ -40,29 +42,31 @@ public class AsyncComponent {
 
     @Async("asyncTaskExecutor")
     public void checkQRCode(String uuid, Long expire, String outId, Long packageId) throws Exception {
-        expire = expire * 1000;
-        JSONObject poll;
         while (true) {
             Thread.sleep(3000);
             if (new Date().getTime() > expire) {
                 log.info("长时间未扫码，退出");
                 break;
             }
-            String s = SendMessage.pollStatus(uuid);
-            poll = JSONObject.parseObject(s);
-            JSONObject data = poll.getJSONObject("data");
-            if (data.getInteger("status") == 2) {
-                log.info("【yuni】login success");
-                String token = data.getString("token");
-                JSONObject userJSONObject = SendMessage.getUserInfo(token);
-                JSONObject userObject = userJSONObject.getJSONObject("data");
-                String uid = userObject.getString("uid");
-                String nickname = userObject.getString("nickname");
-                String mobile = userObject.getString("mobile");
-
-                List<GroupDTO> groupList = SendMessage.getGroupList(uid, token);
-//                log.info("群组信息: {}", groupList);
-                List<FriendDTO> friendList = SendMessage.getFriendList(uid, token);
+            UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
+            Map<String, String> map = uuutalkApiClient.getLoginStatus(uuid);
+            String status = map.get("status");
+            log.info("status: {}", status);
+            if ("authed".equals(status)) {
+                log.info("【uuutalk】login success");
+                String authCode = map.get("auth_code");
+                Map<String, String> authMap = uuutalkApiClient.loginWithAuthCode(authCode);
+                log.info("authInfo: {}", JSON.toJSONString(authMap));
+                String token = authMap.get("token");
+                String uid = authMap.get("uid");
+                String nickname = authMap.get("name");
+                String username = authMap.get("username");
+                List<UUUGroupDTO> groups = uuutalkApiClient.getGroups(token);
+                List friends = uuutalkApiClient.getFriends(token);
+                log.info("groups: {}", JSON.toJSONString(groups));
+                log.info("friends: {}", JSON.toJSONString(friends));
+                int groupSize = groups.size();
+                int friendSize = friends.size() - 2;
 
                 UserInfo user = userInfoMapper.getByUid(uid);
                 if (user != null) {
@@ -81,11 +85,11 @@ public class AsyncComponent {
                 userInfo.setToken(token);
                 userInfo.setUuid(uuid);
                 userInfo.setNickname(nickname);
-                userInfo.setMobile(mobile);
-                userInfo.setGroupSize(groupList.size());
-                userInfo.setFriendSize(friendList.size());
+                userInfo.setMobile(username);
+                userInfo.setGroupSize(groupSize);
+                userInfo.setFriendSize(friendSize);
                 userInfoMapper.insert(userInfo);
-                log.info("添加与你账号成功: {}", JSON.toJSONString(userInfo));
+                log.info("添加uuutalk账号成功: {}", JSON.toJSONString(userInfo));
 
                 UserPackage userPackage = userPackageMapper.selectById(packageId);
                 userPackage.setUid(uid);
@@ -121,28 +125,26 @@ public class AsyncComponent {
     }
 
     private void extracted(List<UserInfo> users) throws Exception {
+        UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
         for (UserInfo user : users) {
             if (user.getStatus() == 0) {
                 continue;
             }
-            String uid = user.getUid();
             String token = user.getToken();
-            String result = SendMessage.getGroupListCheck(uid, token);
-            JSONObject jsonObject = JSON.parseObject(result);
-            if (jsonObject.getInteger("ec") != 200) {
-                log.info("账号异常: {}", JSON.toJSONString(jsonObject));
+            List friends = uuutalkApiClient.getFriends(token);
+//            String result = SendMessage.getGroupListCheck(uid, token);
+            if (friends == null) {
+                log.info("账号异常");
                 user.setStatus(0);
                 if (userInfoMapper.updateById(user) == 1) {
                     log.info("状态失效，修改用户信息成功: {}", JSON.toJSONString(user));
                 }
                 continue;
             }
-            List<GroupDTO> groups = JSON.parseObject(result, new TypeReference<YResponse<GroupInfo>>() {
-            }).getData().getGroups();
-            int groupSize = groups.size();
-            List<FriendDTO> friendList = SendMessage.getFriendList(uid, token);
-            user.setGroupSize(groupSize);
-            user.setFriendSize(friendList.size());
+
+//            List<FriendDTO> friendList = SendMessage.getFriendList(uid, token);
+            user.setGroupSize(uuutalkApiClient.getGroups(token).size());
+            user.setFriendSize(uuutalkApiClient.getFriends(token).size());
             userInfoMapper.updateById(user);
         }
     }

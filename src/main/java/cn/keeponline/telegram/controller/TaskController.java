@@ -4,19 +4,14 @@ import cn.hutool.core.util.StrUtil;
 import cn.keeponline.telegram.entity.SystemConfigs;
 import cn.keeponline.telegram.entity.UserInfo;
 import cn.keeponline.telegram.entity.UserPackage;
-import cn.keeponline.telegram.entity.UserTask;
 import cn.keeponline.telegram.exception.BizzRuntimeException;
 import cn.keeponline.telegram.input.*;
 import cn.keeponline.telegram.mapper.SystemConfigsMapper;
 import cn.keeponline.telegram.mapper.UserInfoMapper;
 import cn.keeponline.telegram.mapper.UserPackageMapper;
-import cn.keeponline.telegram.mapper.UserTaskMapper;
 import cn.keeponline.telegram.response.Response;
 import cn.keeponline.telegram.schedule.RestartAbnormalTask;
 import cn.keeponline.telegram.service.TaskService;
-import cn.keeponline.telegram.test.SendMessage;
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static cn.keeponline.telegram.service.impl.TaskServiceImpl.statusMap;
 @RestController
 @RequestMapping("/task")
 @Api(tags = "任务相关")
@@ -39,9 +33,6 @@ public class TaskController extends ControllerBase {
 
     @Autowired
     private TaskService taskService;
-
-    @Autowired
-    private UserTaskMapper userTaskMapper;
 
     @Autowired
     private UserInfoMapper userInfoMapper;
@@ -55,59 +46,6 @@ public class TaskController extends ControllerBase {
     @Qualifier("userPackageMapper")
     @Autowired
     private UserPackageMapper userPackageMapper;
-
-    @ApiOperation("添加任务")
-    @PostMapping("/addTask")
-    public Response addTask(@Valid AddTaskInput addTaskInput) throws Exception {
-        log.info("addTaskInput: {}", addTaskInput);
-        String uid = addTaskInput.getUid();
-        Integer cvsType = addTaskInput.getCvsType();
-        Integer sendInterval = addTaskInput.getSendInterval();
-        String messageContent = addTaskInput.getMessageContent();
-        if (addTaskInput.getFile() == null && StrUtil.isBlank(addTaskInput.getMessageContent())) {
-            throw new BizzRuntimeException("必须得有发送内容或图片");
-        }
-        SystemConfigs systemConfigs = systemConfigsMapper.getByKey("sendInterval");
-        int interval = Integer.parseInt(systemConfigs.getValue());
-
-        if (sendInterval < interval) {
-            throw new BizzRuntimeException("间隔时间不能小于" + interval + "秒");
-        }
-        if (cvsType != 1 && cvsType != 2) {
-            throw new BizzRuntimeException("发送类型只能是1或2");
-        }
-        UserTask userTask = userTaskMapper.getByUidAndCvsTypeAndStatus(uid, cvsType, null);
-        if (userTask != null) {
-            throw new BizzRuntimeException("该账号存在已经在运行的任务，请停止后再运行新的任务");
-        }
-        UserInfo userInfo = userInfoMapper.getByUid(uid);
-        if (userInfo == null) {
-            throw new BizzRuntimeException("找不到用户");
-        }
-        UserPackage userPackage = userPackageMapper.getByUidAndStatus(uid, 1);
-        if (userPackage == null) {
-            throw new BizzRuntimeException("账号关联的套餐无效");
-        }
-        String token = userInfo.getToken();
-        JSONObject wssInfo = SendMessage.getAccessToken(uid, token);
-        if (wssInfo.getInteger("ec") != 200) {
-            throw new BizzRuntimeException("账号已失效，请重新上号");
-        }
-        userTask = new UserTask();
-        userTask.setCvsType(cvsType);
-        userTask.setUid(uid);
-        userTask.setAccountId(userInfo.getAccountId());
-        userTask.setStatus(1);
-        userTask.setSendInterval(sendInterval * 1000);
-        userTask.setMessageContent(messageContent);
-        userTaskMapper.insert(userTask);
-        statusMap.put(uid, 1);
-        log.info("【yuni】任务记录添加成功: {}", JSON.toJSONString(userTask));
-        taskService.asyncAddTask(addTaskInput);
-        // 这里为啥要sleep，是要等异步的方法把图片处理完成
-        Thread.sleep(1500);
-        return Response.success();
-    }
 
     @ApiOperation("批量添加任务")
     @PostMapping("/addBatchTask")
@@ -141,6 +79,7 @@ public class TaskController extends ControllerBase {
             throw new BizzRuntimeException("间隔时间不能小于" + interval + "秒");
         }
         taskService.addBatch(addBatchTaskInput);
+        Thread.sleep(3000);
         return Response.success();
     }
 

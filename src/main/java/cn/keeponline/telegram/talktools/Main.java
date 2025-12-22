@@ -22,12 +22,12 @@ public class Main {
 
         try {
             // 1. 扫码登录
-            UuutalkApiClient apiClient = new UuutalkApiClient();
-//            Map<String, Object> groups = apiClient.getGroups();
-//            logger.info("groups: {}", JSON.toJSONString(groups));
-            logger.info("开始扫码登录流程...");
-            Map<String, Object> loginResp = apiClient.runQrLoginFlow(2.0f, 180);
-            logger.info("登录成功, loginResp: {}", loginResp);
+//            UuutalkApiClient apiClient = new UuutalkApiClient();
+////            Map<String, Object> groups = apiClient.getGroups();
+////            logger.info("groups: {}", JSON.toJSONString(groups));
+//            logger.info("开始扫码登录流程...");
+//            Map<String, String> loginResp = apiClient.runQrLoginFlow(2.0f, 180);
+//            logger.info("登录成功, loginResp: {}", loginResp);
 
 //            String uid = (String) loginResp.get("uid");
 //            String token = (String) loginResp.get("token");
@@ -52,13 +52,13 @@ public class Main {
 //            GLOBAL_CONFIG.avatar = "users/59ae5a30bcf34c349b135b9c8fccac86/avatar";
 //            GLOBAL_CONFIG.shortNo = "AP2DH6RRYO";
 
-            logger.info("扫码登录成功：uid={}, token={}", uid, token);
+//            logger.info("扫码登录成功：uid={}, token={}", uid, token);
 
-            Map<String, Object> groups = apiClient.getGroups();
-            logger.info("groups: {}", JSON.toJSONString(groups));
+//            Map<String, Object> groups = apiClient.getGroups(token);
+//            logger.info("groups: {}", JSON.toJSONString(groups));
 
             // 2. 启动 WebSocket 客户端
-            logger.info("准备连接 IM WebSocket 服务...");
+            System.out.println("准备连接 IM WebSocket 服务...");
             UUTalkClient.runWsClient(uid, token);
 
         } catch (Exception e) {

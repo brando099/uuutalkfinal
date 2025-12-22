@@ -1,5 +1,6 @@
 package cn.keeponline.telegram.talktools.handler;
 
+import cn.keeponline.telegram.talktools.cache.GlobalCache;
 import cn.keeponline.telegram.talktools.core.*;
 import cn.keeponline.telegram.talktools.logging.Logging;
 import cn.keeponline.telegram.talktools.ws.ShareManager;
@@ -8,6 +9,7 @@ import org.slf4j.Logger;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * WebSocket 消息处理器
@@ -15,6 +17,7 @@ import java.util.Map;
 public class UUTalkOnMessage {
     private static final Logger logger = Logging.getLogger(UUTalkOnMessage.class);
     private static final PacketDecoder decoder = new PacketDecoder();
+
 
     public static void onPacket(byte[] rawBytes, WebSocketWrapper ws) {
         try {
@@ -31,7 +34,7 @@ public class UUTalkOnMessage {
 
         // CONNACK 处理
         if (packetType == PacketType.CONNACK) {
-            handleConnack(packet);
+            handleConnack(packet, ws);
             return;
         }
 
@@ -54,7 +57,7 @@ public class UUTalkOnMessage {
         onPacketHandler(packet, ws);
     }
 
-    private static void handleConnack(Map<String, Object> packet) {
+    private static void handleConnack(Map<String, Object> packet, WebSocketWrapper ws) {
         logger.info("CONNACK 内容:");
         String nodeId = String.valueOf(packet.getOrDefault("nodeId", ""));
         Integer reasonCode = (Integer) packet.get("reasonCode");
@@ -64,9 +67,15 @@ public class UUTalkOnMessage {
             try {
                 UUTalkTool tool = new UUTalkTool(ShareManager.DH_PRIVATE_KEY_BYTES);
                 String[] aes = tool.deriveAesFromConnack(packet, ShareManager.DH_PRIVATE_KEY_BYTES);
-                ShareManager.aesKey = aes[0];
-                ShareManager.aesIv = aes[1];
-                ShareManager.aesReady = true;
+                String aesKey = aes[0];
+                String aesIv = aes[1];
+                boolean aesReady = true;
+                ShareManager shareManager = new ShareManager();
+                shareManager.setAesKey(aesKey);
+                shareManager.setAesIv(aesIv);
+                shareManager.setAesReady(aesReady);
+
+                GlobalCache.shareMap.put(ws.getUid(), shareManager);
 
                 logger.info("[CONNACK] AES 解密环境准备完成");
             } catch (Exception e) {
@@ -83,12 +92,13 @@ public class UUTalkOnMessage {
         if (packet.get("packetType") == PacketType.SENDACK) {
             return;
         }
-
-        // 解密消息体 payload
-        if (!ShareManager.aesReady || ShareManager.aesKey == null || ShareManager.aesIv == null) {
-            logger.warn("AES 尚未准备好，无法解密 payload");
+        String uid = ws.getUid();
+        ShareManager shareManager = GlobalCache.shareMap.get(uid);
+        if (shareManager == null) {
+            logger.warn("AES 尚未准备好，无法发送加密消息");
             return;
         }
+
 
         byte[] payload = (byte[]) packet.get("payload");
         if (payload == null) {
@@ -96,7 +106,7 @@ public class UUTalkOnMessage {
         }
 
         try {
-            byte[] plain = UUTalkTool.decryptPayloadBase64(ShareManager.aesKey, ShareManager.aesIv, payload);
+            byte[] plain = UUTalkTool.decryptPayloadBase64(shareManager.aesKey, shareManager.aesIv, payload);
             String text = new String(plain, StandardCharsets.UTF_8);
             logger.info("解密文本: {}", text);
         } catch (Exception e) {

@@ -7,6 +7,7 @@ import cn.keeponline.telegram.talktools.logging.Logging;
 import cn.keeponline.telegram.talktools.ws.ShareManager;
 import cn.keeponline.telegram.talktools.ws.UUTalkWsCore;
 import cn.keeponline.telegram.talktools.ws.WebSocketWrapper;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.Headers;
 import org.bouncycastle.crypto.params.X25519PrivateKeyParameters;
 import org.bouncycastle.crypto.params.X25519PublicKeyParameters;
@@ -18,9 +19,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import static cn.keeponline.telegram.service.impl.TaskServiceImpl.uuuSocketMap;
+
 /**
  * UUTalk WebSocket 客户端
  */
+@Slf4j
 public class UUTalkClient {
     private static final Logger logger = Logging.getLogger(UUTalkClient.class);
     private static final String WS_URL = "wss://ws.uuutalk.cc/";
@@ -65,7 +69,11 @@ public class UUTalkClient {
     /**
      * 启动 WebSocket 客户端
      */
-    public static void runWsClient(String uid, String token) {
+    public static WebSocketWrapper runWsClient(String uid, String token) {
+        WebSocketWrapper webSocketWrapper = uuuSocketMap.get(uid);
+        if (webSocketWrapper != null) {
+            return webSocketWrapper;
+        }
         logger.info("run_ws_client 启动, uid={}, token={}", uid, token);
 
         // 更新全局参数
@@ -80,7 +88,7 @@ public class UUTalkClient {
                 .add("Origin", "https://web.uuutalk.co")
                 .build();
 
-        WebSocketWrapper ws = new WebSocketWrapper(WS_URL, "https://web.uuutalk.co", headers);
+        WebSocketWrapper ws = new WebSocketWrapper(WS_URL, "https://web.uuutalk.co", headers, uid);
         ws.setReconnectInterval(3);
         ws.setPingInterval(20);
 
@@ -126,18 +134,21 @@ public class UUTalkClient {
         ws.connect();
 
         // 等待 AES ready
-        logger.info("等待 AES 准备好...");
-        while (!ShareManager.aesReady) {
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return;
-            }
-        }
+//        logger.info("等待 AES 准备好...");
+//        while (!ShareManager.aesReady) {
+//            try {
+//                Thread.sleep(2000);
+//            } catch (InterruptedException e) {
+//                Thread.currentThread().interrupt();
+//                return ws;
+//            }
+//        }
 
-        logger.info("AES 已准备好，可随时发送消息");
-        UUTalkWsCore.sendTextMessage(ws, "112233", "b6e2232835024a3bbf97742d44ee1f97", 2);
+//        System.out.println(("AES 已准备好，可随时发送消息"));
+//        boolean b = UUTalkWsCore.sendPictureMessage(ws, "file/preview/chat/2/d88d5141821740aeaa6366776f95dd50/1a3ba617f3384eb2978255a27ecdb7b7.png", "b6e2232835024a3bbf97742d44ee1f97", 2);
+//        System.out.println("发送结果" + b);
+        return ws;
+
     }
 
     private static String bytesToHex(byte[] bytes) {

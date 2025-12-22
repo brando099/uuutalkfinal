@@ -1,5 +1,6 @@
 package cn.keeponline.telegram.talktools.ws;
 
+import cn.keeponline.telegram.talktools.cache.GlobalCache;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import cn.keeponline.telegram.talktools.config.UUTalkGlobalConfig;
 import cn.keeponline.telegram.talktools.core.PacketEncoder;
@@ -29,11 +30,12 @@ public final class UUTalkWsCore {
      * 构造并发送文本消息。
      * 等价 Python 的 send_text_message(...)
      */
-    public static void sendTextMessage(
+    public static boolean sendTextMessage(
             WebSocketWrapper ws,
             String content,
             String channelId,
-            int channelType
+            int channelType,
+            String uid
     ) {
         // 1. 构造消息体
         Map<String, Object> msg = new HashMap<>();
@@ -52,16 +54,56 @@ public final class UUTalkWsCore {
         logger.info("发送消息体: {}", packet);
 
         // 4. 编码并发送（需要 AES key/iv 已经从 CONNACK 推导完成）
-        if (!ShareManager.aesReady || ShareManager.aesKey == null || ShareManager.aesIv == null) {
+        ShareManager shareManager = GlobalCache.shareMap.get(uid);
+        if (shareManager == null) {
             logger.warn("AES 尚未准备好，无法发送加密消息");
-            return;
+            return false;
         }
 
-        PacketEncoder encoder = new PacketEncoder(ShareManager.aesKey, ShareManager.aesIv);
+        PacketEncoder encoder = new PacketEncoder(shareManager.aesKey, shareManager.aesIv);
         byte[] raw = encoder.encode(packet);
 
         logger.info("发送 SEND 消息, 字节长度={}", raw.length);
-        ws.send(raw);
+        return ws.send(raw);
+    }
+
+    public static boolean sendPictureMessage(
+            WebSocketWrapper ws,
+            String url,
+            String channelId,
+            int channelType,
+            String uid
+    ) {
+        // 1. 构造消息体
+        Map<String, Object> msg = new HashMap<>();
+        msg.put("width", 1440);
+        msg.put("height", 1440);
+        msg.put("url", url);
+        msg.put("size", 74326);
+        msg.put("isOriginalImage", true);
+        msg.put("type", 2);
+
+        // 2. 构造频道信息
+        Map<String, Object> channel = new HashMap<>();
+        channel.put("channelID", channelId);
+        channel.put("channelType", channelType);
+
+        // 3. 构造发送包
+        Map<String, Object> packet = buildSendPacket(msg, channel, null);
+        logger.info("发送消息体: {}", packet);
+
+        // 4. 编码并发送（需要 AES key/iv 已经从 CONNACK 推导完成）
+        ShareManager shareManager = GlobalCache.shareMap.get(uid);
+        if (shareManager == null) {
+            logger.warn("AES 尚未准备好，无法发送加密消息");
+            return false;
+        }
+
+        PacketEncoder encoder = new PacketEncoder(shareManager.aesKey, shareManager.aesIv);
+        byte[] raw = encoder.encode(packet);
+
+        logger.info("发送 SEND 消息, 字节长度={}", raw.length);
+        return ws.send(raw);
     }
 
     /**
@@ -74,7 +116,7 @@ public final class UUTalkWsCore {
     ) {
         String channelId = GLOBAL_CONFIG.deviceId;
         int channelType = GLOBAL_CONFIG.defaultChannelType;
-        sendTextMessage(ws, content, channelId, channelType);
+//        sendTextMessage(ws, content, channelId, channelType);
     }
 
     /**

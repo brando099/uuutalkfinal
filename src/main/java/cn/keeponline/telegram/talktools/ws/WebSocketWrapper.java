@@ -1,15 +1,21 @@
 package cn.keeponline.telegram.talktools.ws;
 
+import cn.keeponline.telegram.talktools.cache.GlobalCache;
+import cn.keeponline.telegram.talktools.core.PacketEncoder;
 import cn.keeponline.telegram.talktools.logging.Logging;
+import lombok.Data;
 import okhttp3.*;
 import org.slf4j.Logger;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
  * WebSocket 包装类
  * 使用 OkHttp WebSocket
  */
+@Data
 public class WebSocketWrapper {
     private static final Logger logger = Logging.getLogger(WebSocketWrapper.class);
 
@@ -22,16 +28,18 @@ public class WebSocketWrapper {
     private boolean reconnect = true;
     private int reconnectInterval = 5; // 秒
     private int pingInterval = 25; // 秒
+    private String uid;
 
     private Runnable onOpenCallback;
     private MessageCallback onMessageCallback;
     private CloseCallback onCloseCallback;
     private ErrorCallback onErrorCallback;
 
-    public WebSocketWrapper(String url, String origin, Headers headers) {
+    public WebSocketWrapper(String url, String origin, Headers headers, String uid) {
         this.url = url;
         this.origin = origin;
         this.headers = headers;
+        this.uid = uid;
         this.client = new OkHttpClient.Builder()
                 .pingInterval(pingInterval, TimeUnit.SECONDS)
                 .build();
@@ -123,11 +131,12 @@ public class WebSocketWrapper {
         this.onErrorCallback = callback;
     }
 
-    public void send(byte[] data) {
+    public boolean send(byte[] data) {
         if (webSocket != null) {
-            webSocket.send(okio.ByteString.of(data));
+            return webSocket.send(okio.ByteString.of(data));
         } else {
             logger.warn("ws 尚未连接，无法发送");
+            return false;
         }
     }
 

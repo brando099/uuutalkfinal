@@ -222,9 +222,9 @@ public class OssMultipartUploader {
 
     // 示例 main
     public static void main(String[] args) throws Exception {
-        String token = "3f27cfa6702d4d33a2bb9a87bf62448c";
-        String localPng = "/Users/lenmon/Downloads/Midjourney图片/Snipaste_2024-11-22_23-34-09.png";
-        String ossKey = "chat/2/b6e2232835024a3bbf97742d44ee1f97/e32bbc169e2a0f2e5e7b19a3ce16d271.png";
+        String token = "e79acc9db1bb4012a10b6f4565954f63";
+        String localPng = "/Users/momemtkes/Downloads/chrome/5992.png";
+        String ossKey = "chat/2/d88d5141821740aeaa6366776f95dd50/1a3ba617f3384eb2978255a27ecdb7b7.png";
 
         multipartUploadOnePart(token, localPng, ossKey);
     }

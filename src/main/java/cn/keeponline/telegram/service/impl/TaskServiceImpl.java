@@ -4,6 +4,8 @@ import cn.hutool.core.util.StrUtil;
 import cn.keeponline.telegram.component.AsyncComponent;
 import cn.keeponline.telegram.context.SysUserContext;
 import cn.keeponline.telegram.dto.*;
+import cn.keeponline.telegram.dto.uuudto.UUUFriendDTO;
+import cn.keeponline.telegram.dto.uuudto.UUUGroupDTO;
 import cn.keeponline.telegram.dto.ws.GmsgDTO;
 import cn.keeponline.telegram.dto.ws.MarksDTO;
 import cn.keeponline.telegram.dto.ws.SmetaDTO;
@@ -11,15 +13,17 @@ import cn.keeponline.telegram.entity.MsgRecord;
 import cn.keeponline.telegram.entity.SendRecord;
 import cn.keeponline.telegram.entity.UserInfo;
 import cn.keeponline.telegram.entity.UserTask;
-import cn.keeponline.telegram.exception.BizzRuntimeException;
 import cn.keeponline.telegram.input.*;
 import cn.keeponline.telegram.mapper.MsgRecordMapper;
 import cn.keeponline.telegram.mapper.UserInfoMapper;
 import cn.keeponline.telegram.mapper.UserTaskMapper;
 import cn.keeponline.telegram.service.TaskService;
-import cn.keeponline.telegram.test.SendMessage;
+import cn.keeponline.telegram.talktools.services.OssMultipartUploader;
+import cn.keeponline.telegram.talktools.services.UuutalkApiClient;
+import cn.keeponline.telegram.talktools.uutalk.UUTalkClient;
+import cn.keeponline.telegram.talktools.ws.UUTalkWsCore;
+import cn.keeponline.telegram.talktools.ws.WebSocketWrapper;
 import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.TypeReference;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
@@ -51,6 +55,9 @@ public class TaskServiceImpl implements TaskService {
     // 保留所有的连接信息
     public static Map<String, WebSocket> WebSocketMap = new ConcurrentHashMap<>();
 
+    // 保留所有的连接信息
+    public static Map<String, WebSocketWrapper> uuuSocketMap = new ConcurrentHashMap<>();
+
     // 保留用户的群组元数据，可以去更新
     public static Map<String, Map<String, Long>> smetaMap = new ConcurrentHashMap<>();
 
@@ -72,9 +79,6 @@ public class TaskServiceImpl implements TaskService {
     private UserInfoMapper userInfoMapper;
 
     @Autowired
-    private SendMessage sendMessage;
-
-    @Autowired
     private SysUserContext sysUserContext;
 
     @Autowired
@@ -86,105 +90,6 @@ public class TaskServiceImpl implements TaskService {
 
     @Autowired
     private AsyncComponent asyncComponent;
-
-    @Override
-    @Async("asyncTaskExecutor")
-    public void asyncAddTask(AddTaskInput addTaskInput) throws Exception {
-        String uid = addTaskInput.getUid();
-        Integer cvsType = addTaskInput.getCvsType();
-        String messageContent = addTaskInput.getMessageContent();
-        MultipartFile file = addTaskInput.getFile();
-        long size = 0;
-        String file_name = UUID.randomUUID() + ".png";
-        File tempFile = null;
-        String md5 = null;
-        if (file != null) {
-            // 计算文件MD5
-            size = file.getSize();
-            md5 = DigestUtils.md5DigestAsHex(file.getInputStream());
-            // 创建本地保存目录
-            String path = System.getProperty("user.home") + "/yunipicture";
-            File uploadDir = new File(path);
-            if (!uploadDir.exists()) {
-                uploadDir.mkdirs();
-            }
-            tempFile = new File(uploadDir, md5+".png");
-            Files.copy(file.getInputStream(), tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            log.info("文件已保存至本地路径: {}", tempFile.getAbsolutePath());
-        }
-
-        UserInfo userInfo = userInfoMapper.getByUid(uid);
-        if (userInfo == null) {
-            throw new BizzRuntimeException("找不到用户");
-        }
-
-        String token = userInfo.getToken();
-        JSONObject wssInfo = SendMessage.getAccessToken(uid, token);
-        Integer ec = wssInfo.getInteger("ec");
-        if (ec != 200) {
-            // 用户状态改一下，任务状态不用动
-            userInfo.setStatus(0);
-            userInfoMapper.updateById(userInfo);
-            log.info("[asyncRestartTask]修改用户状态成功: {}", JSON.toJSONString(userInfo));
-            return;
-        }
-        String accessToken = wssInfo.getJSONObject("data").getString("access_token");
-        WebSocket ws = getWebSocket(uid, accessToken);
-        WebSocketMap.put(uid, ws);
-
-        String cmdType = "g.gmsg";
-        List<SendGeneralDTO> list;
-        if (cvsType == 2) {
-            List<GroupDTO> groupList = SendMessage.getGroupList(uid, token);
-            list = groupList.stream().map(x -> {
-                SendGeneralDTO sendGeneralDTO = new SendGeneralDTO();
-                sendGeneralDTO.setName(x.getName());
-                sendGeneralDTO.setId(x.getGid());
-                return sendGeneralDTO;
-            }).collect(Collectors.toList());
-            log.info("groupList: {}", JSON.toJSONString(groupList));
-        } else {
-            List<FriendDTO> friendList = SendMessage.getFriendList(uid, token);
-            list = friendList.stream().map(x -> {
-                SendGeneralDTO sendGeneralDTO = new SendGeneralDTO();
-                sendGeneralDTO.setName(x.getNickname());
-                sendGeneralDTO.setId(x.getRemote_uid());
-                return sendGeneralDTO;
-            }).collect(Collectors.toList());
-            cmdType = "g.pmsg";
-            log.info("friendList: {}", JSON.toJSONString(friendList));
-        }
-
-        JSONObject pictureJSONObject = null;
-        String file_size;
-        // 这个地方得改成null，不然长连接刚连上就断开，导致任务查询不到，会报空指针异常
-        UserTask userTask = userTaskMapper.getByUidAndCvsTypeAndStatus(uid, cvsType, null);
-        if (file != null) {
-            pictureJSONObject = sendMessage.getPictureRoute(uid, token, md5, tempFile, size, file_name);
-            md5 = pictureJSONObject.getString("file_md5");
-            JSONObject basicInfo2 = pictureJSONObject.getJSONObject("basic_info");
-            file_name = basicInfo2.getString("file_name");
-            file_size = basicInfo2.getString("file_size");
-            userTask.setMd5(md5);
-            userTask.setFileName(file_name);
-            userTask.setFileSize(Long.valueOf(file_size));
-            if (userTaskMapper.updateById(userTask) == 1) {
-                log.info("更新任务md5信息成功: {}", JSON.toJSONString(userTask));
-            }
-        }
-        try {
-            startScheduleSend(userTask, list, pictureJSONObject, uid, cmdType, cvsType, messageContent, md5, ws);
-        } catch (Exception e) {
-            log.error("发送异常", e);
-            WebSocketMap.remove(uid);
-            // 修改任务状态、break循环
-            userTask.setStatus(0);
-            if (userTaskMapper.updateById(userTask) == 1) {
-                log.error("发送异常，修改任务状态成功: {}", JSON.toJSONString(userTask));
-            }
-            statusMap.put(uid, 0);
-        }
-    }
 
     @Override
     @Async("asyncTaskExecutor")
@@ -225,14 +130,12 @@ public class TaskServiceImpl implements TaskService {
             }
             File tempFile = new File(uploadDir, md5+".png");
             Files.copy(file.getInputStream(), tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            JSONObject pictureJSONObject = sendMessage.getPictureRoute(uid, token, md5, tempFile, size, file_name);
-            md5 = pictureJSONObject.getString("file_md5");
-            JSONObject basicInfo2 = pictureJSONObject.getJSONObject("basic_info");
-            file_name = basicInfo2.getString("file_name");
-            String file_size = basicInfo2.getString("file_size");
+            String objectKey = "chat/2/d88d5141821740aeaa6366776f95dd50/{md5}.png".replace("{md5}", md5);
+            OssMultipartUploader.multipartUploadOnePart(token, tempFile.getAbsolutePath(), objectKey);
+
             userTask.setMd5(md5);
-            userTask.setFileName(file_name);
-            userTask.setFileSize(Long.valueOf(file_size));
+            userTask.setFileName("file/preview/" + objectKey);
+            userTask.setFileSize(size);
             userTask.setType(2);
         }
         for (UserInfo user : userInfos) {
@@ -261,68 +164,46 @@ public class TaskServiceImpl implements TaskService {
             return;
         }
         String token = userInfo.getToken();
-        JSONObject wssInfo = SendMessage.getAccessToken(uid, token);
-        log.info("wssInfo: {}", JSON.toJSONString(wssInfo));
-        Integer ec = wssInfo.getInteger("ec");
-        if (ec != 200) {
-            // 用户状态改一下，任务状态不用动
-            userInfo.setStatus(0);
-            userInfoMapper.updateById(userInfo);
-            log.info("[asyncRestartTask]修改用户状态成功: {}", JSON.toJSONString(userInfo));
-            return;
-        }
-        String accessToken = wssInfo.getJSONObject("data").getString("access_token");
-        WebSocket ws = getWebSocket(uid, accessToken);
-        WebSocketMap.put(uid, ws);
+//        JSONObject wssInfo = SendMessage.getAccessToken(uid, token);
+//        log.info("wssInfo: {}", JSON.toJSONString(wssInfo));
+//        Integer ec = wssInfo.getInteger("ec");
+//        if (ec != 200) {
+//            // 用户状态改一下，任务状态不用动
+//            userInfo.setStatus(0);
+//            userInfoMapper.updateById(userInfo);
+//            log.info("[asyncRestartTask]修改用户状态成功: {}", JSON.toJSONString(userInfo));
+//            return;
+//        }
+//        String accessToken = wssInfo.getJSONObject("data").getString("access_token");
+        WebSocketWrapper ws = UUTalkClient.runWsClient(uid, token);
+        uuuSocketMap.put(uid, ws);
         statusMap.put(uid, 1);
         // 等待一下，让ws把状态修改过来
         Thread.sleep(1500);
-        String cmdType = "g.gmsg";
-        List<SendGeneralDTO> list;
+        List<SendGeneralDTO> list = new ArrayList<>();
+        UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
         if (cvsType == 2) {
-            List<GroupDTO> groupList = SendMessage.getGroupList(uid, token);
-            list = groupList.stream().map(x -> {
+            List<UUUGroupDTO> groupsList = uuutalkApiClient.getGroups(token);
+            for (UUUGroupDTO uuuGroupDTO : groupsList) {
                 SendGeneralDTO sendGeneralDTO = new SendGeneralDTO();
-                sendGeneralDTO.setId(x.getGid());
-                sendGeneralDTO.setName(x.getName());
-                return sendGeneralDTO;
-            }).collect(Collectors.toList());
-//            log.info("groupList: {}", JSON.toJSONString(groupList));
-        } else {
-            List<FriendDTO> friendList = SendMessage.getFriendList(uid, token);
-            list = friendList.stream().map(x -> {
-                SendGeneralDTO sendGeneralDTO = new SendGeneralDTO();
-                sendGeneralDTO.setId(x.getRemote_uid());
-                sendGeneralDTO.setName(x.getNickname());
-                return sendGeneralDTO;
-            }).collect(Collectors.toList());
-            cmdType = "g.pmsg";
-//            log.info("friendList: {}", JSON.toJSONString(friendList));
-        }
-
-//        List<GroupDTO> groupList = SendMessage.getGroupList(uid, token);
-//        log.info("groupList: {}", JSON.toJSONString(groupList));
-        Thread.sleep(2000);
-
-        JSONObject pictureJSONObject = null;
-        String md5 = null;
-        if (userTask.getMd5() != null) {
-            md5 = userTask.getMd5();
-            String file_name = userTask.getFileName();
-            String file_size = userTask.getFileSize() + "";
-            String path = System.getProperty("user.home") + "/yunipicture";
-            File uploadDir = new File(path);
-            if (!uploadDir.exists()) {
-                uploadDir.mkdirs();
+                sendGeneralDTO.setId(uuuGroupDTO.getGroup_no());
+                sendGeneralDTO.setName(uuuGroupDTO.getName());
+                sendGeneralDTO.setForbidden(uuuGroupDTO.getForbidden());
+                sendGeneralDTO.setChannelType(2);
+                list.add(sendGeneralDTO);
             }
-            File tempFile = new File(uploadDir, md5+".png");
-            long length = tempFile.length();
-            log.info("重启异常任务的时候拿到图片的大小: {}", length);
-            pictureJSONObject = sendMessage.getPictureRoute(uid, token, md5, tempFile, Long.valueOf(file_size), file_name);
+        } else {
+            List<UUUFriendDTO> friends = uuutalkApiClient.getFriends(token);
+            for (UUUFriendDTO friend : friends) {
+                SendGeneralDTO sendGeneralDTO = new SendGeneralDTO();
+                sendGeneralDTO.setId(friend.getUid());
+                sendGeneralDTO.setName(friend.getName());
+                sendGeneralDTO.setChannelType(1);
+                list.add(sendGeneralDTO);
+            }
         }
-
         try {
-            startScheduleSend(userTask, list, pictureJSONObject, uid, cmdType, cvsType, messageContent, md5, ws);
+            startScheduleSend(userTask, list, ws);
         } catch (Exception e) {
             WebSocketMap.remove(uid);
             // 修改任务状态、break循环
@@ -335,13 +216,8 @@ public class TaskServiceImpl implements TaskService {
 
     private void startScheduleSend(UserTask userTask,
                                    List<SendGeneralDTO> list,
-                                   JSONObject pictureJSONObject,
-                                   String uid,
-                                   String cmdType,
-                                   Integer cvsType,
-                                   String messageContent,
-                                   String md5,
-                                   WebSocket ws) {
+                                   WebSocketWrapper ws) {
+        String uid = userTask.getUid();
         // stop existing task if exists
         stopSchedule(uid);
 
@@ -352,7 +228,7 @@ public class TaskServiceImpl implements TaskService {
         ScheduledFuture<?> future =
                 taskScheduler.scheduleWithFixedDelay(() -> {
                     try {
-                        sendOnce(userTask, list, pictureJSONObject, uid, cmdType, cvsType, messageContent, md5, ws);
+                        sendOnce(userTask, list, ws);
                     } catch (Exception e) {
                         log.error("scheduled send error, uid={}", uid, e);
                         stopSchedule(uid);
@@ -364,16 +240,13 @@ public class TaskServiceImpl implements TaskService {
 
     private void sendOnce(UserTask userTask,
                           List<SendGeneralDTO> list,
-                          JSONObject pictureJSONObject,
-                          String uid,
-                          String cmdType,
-                          Integer cvsType,
-                          String messageContent,
-                          String md5,
-                          WebSocket ws) throws Exception {
-//        UserTask userTask = userTaskMapper.selectById(taskId);
+                          WebSocketWrapper ws) throws Exception {
+
+        String uid = userTask.getUid();
+        String content = userTask.getMessageContent();
+        String fileName = userTask.getFileName();
         Integer status = statusMap.get(uid);
-        if (status == null || status != 1) {
+        if (status == null || status == 0) {
             log.info("任务状态异常，停止执行，uid: {}", uid);
             stopSchedule(uid);
             return;
@@ -389,45 +262,16 @@ public class TaskServiceImpl implements TaskService {
 
         String gid = dto.getId();
         String name = dto.getName();
+        Integer channelType = dto.getChannelType();
 
-        String groupMessage;
-        if (md5 != null) {
-            JSONObject fileUrls = pictureJSONObject.getJSONObject("file_urls");
-            JSONObject basicInfo = pictureJSONObject.getJSONObject("basic_info");
 
-            groupMessage = """
-                {"header":{"remoteid":"{gid}","cvsid":"{gid}","uid":"{uid}","status":1,"cmdtype":"{cmdtype}","opid":1},
-                 "body":{"msg_head":{"cvs_type":{cvs_type},"createtime":{createtime},"msgid":"{msgid}","msg_type":3,"chat_profiles":{},"is_display":true},
-                 "msg_body":{"progress":1,"filename":"{filename}","content_type":"image/png",
-                 "images":[{"filename":"{filename}","thumb_url":"{thumb_url}","preview_url":"{preview_url}","origin_url":"{origin_url}","full_url":"{full_url}"}]}}}
-                """
-                    .replace("{gid}", gid)
-                    .replace("{uid}", uid)
-                    .replace("{cmdtype}", cmdType)
-                    .replace("{cvs_type}", cvsType + "")
-                    .replace("{createtime}", String.valueOf(System.currentTimeMillis()))
-                    .replace("{msgid}", UUID.randomUUID().toString())
-                    .replace("{filename}", basicInfo.getString("file_name"))
-                    .replace("{thumb_url}", fileUrls.getString("thumb_url"))
-                    .replace("{preview_url}", fileUrls.getString("preview_url"))
-                    .replace("{origin_url}", fileUrls.getString("origin_url"))
-                    .replace("{full_url}", fileUrls.getString("full_url"));
+        boolean send;
+        if (StrUtil.isBlank(fileName)) {
+            send = UUTalkWsCore.sendTextMessage(ws, content, gid, channelType, uid);
         } else {
-            groupMessage = """
-                {"header":{"remoteid":"{gid}","cvsid":"{gid}","uid":"{uid}","status":1,"cmdtype":"{cmdtype}","opid":1},
-                 "body":{"msg_head":{"cvs_type":{cvs_type},"createtime":{createtime},"msgid":"{msgid}","msg_type":1,"chat_profiles":{},"is_display":true},
-                 "msg_body":{"text":"{messageText}","mentions":{}}}}
-                """
-                    .replace("{gid}", gid)
-                    .replace("{uid}", uid)
-                    .replace("{cmdtype}", cmdType)
-                    .replace("{cvs_type}", cvsType + "")
-                    .replace("{createtime}", String.valueOf(System.currentTimeMillis()))
-                    .replace("{msgid}", UUID.randomUUID().toString())
-                    .replace("{messageText}", messageContent);
+            send = UUTalkWsCore.sendPictureMessage(ws, fileName, gid, channelType, uid);
         }
 
-        boolean send = ws.send(groupMessage);
         SendRecord sendRecord = new SendRecord();
         sendRecord.setUid(uid);
         sendRecord.setGroupName(name);

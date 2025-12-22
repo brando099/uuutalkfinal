@@ -1,5 +1,13 @@
 package cn.keeponline.telegram.talktools.services;
 
+import cn.hutool.Hutool;
+import cn.hutool.http.HttpUtil;
+import cn.keeponline.telegram.dto.uuudto.UUUGroupDTO;
+import cn.keeponline.telegram.dto.uuudto.UUUGroupVO;
+import cn.keeponline.telegram.exception.BizzRuntimeException;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import cn.keeponline.telegram.talktools.logging.Logging;
 import okhttp3.*;
@@ -165,7 +173,7 @@ public class UuutalkApiClient {
     /**
      * 获取登录 UUID 和二维码
      */
-    public Map<String, Object> getLoginUuid() throws IOException {
+    public Map<String, String> getLoginUuid() throws IOException {
         String path = "/user/loginuuid";
         Map<String, String> headers = buildHeaders("GET", path, null, null, null);
 
@@ -186,7 +194,7 @@ public class UuutalkApiClient {
     /**
      * 轮询扫码状态
      */
-    public Map<String, Object> getLoginStatus(String uuid) throws IOException {
+    public Map<String, String> getLoginStatus(String uuid) throws IOException {
         String path = "/user/loginstatus";
         Map<String, String> params = new HashMap<>();
         params.put("uuid", uuid);
@@ -213,13 +221,13 @@ public class UuutalkApiClient {
     /**
      * 获取用户群聊
      */
-    public Map<String, Object> getGroups() throws IOException {
+    public List<UUUGroupDTO> getGroups(String token) throws IOException {
         String path = "/group/page/mine";
         Map<String, String> params = new LinkedHashMap<>();
         params.put("page_size", 20 + "");
         params.put("page_index", 1 + "");
         params.put("keyword", "");
-        Map<String, String> headers = buildHeaders("GET", path, params, null, "04a24819bce74ad894a416c0177bd67e");
+        Map<String, String> headers = buildHeaders("GET", path, params, null, token);
 
         HttpUrl url = HttpUrl.parse(BASE_URL + path).newBuilder()
                 .addQueryParameter("page_size", "20")
@@ -237,14 +245,43 @@ public class UuutalkApiClient {
             if (!response.isSuccessful()) {
                 throw new IOException("Unexpected code " + response);
             }
-            return objectMapper.readValue(response.body().string(), Map.class);
+            return JSON.parseObject(response.body().string(), UUUGroupVO.class).getList();
+        }
+    }
+
+
+    public List getFriends(String token) throws IOException {
+        String path = "/friend/sync";
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("version", "");
+        params.put("api_version", 1 + "");
+        params.put("limit", "10000");
+        Map<String, String> headers = buildHeaders("GET", path, params, null, token);
+
+        HttpUrl url = HttpUrl.parse(BASE_URL + path).newBuilder()
+                .addQueryParameter("version", "")
+                .addQueryParameter("api_version", "1")
+                .addQueryParameter("limit", "10000")
+                .build();
+
+        Request request = new Request.Builder()
+                .url(url)
+                .headers(Headers.of(headers))
+                .get()
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                return null;
+            }
+            return objectMapper.readValue(response.body().string(), List.class);
         }
     }
 
     /**
      * 使用 auth_code 完成登录
      */
-    public Map<String, Object> loginWithAuthCode(String authCode) throws IOException {
+    public Map<String, String> loginWithAuthCode(String authCode) throws IOException {
         String path = "/user/login_authcode/" + authCode;
         Map<String, String> headers = buildHeaders("POST", path, null, "{}", null);
 
@@ -265,9 +302,9 @@ public class UuutalkApiClient {
     /**
      * 一键走完整扫码登录流程
      */
-    public Map<String, Object> runQrLoginFlow(float pollInterval, int timeout) throws IOException, InterruptedException {
+    public Map<String, String> runQrLoginFlow(float pollInterval, int timeout) throws IOException, InterruptedException {
         // 1. 获取 uuid
-        Map<String, Object> uuidInfo = getLoginUuid();
+        Map<String, String> uuidInfo = getLoginUuid();
         String uuid = (String) uuidInfo.get("uuid");
         String qrcodeUrl = (String) uuidInfo.get("qrcode");
 
@@ -284,7 +321,7 @@ public class UuutalkApiClient {
                 throw new IOException("扫码登录超时");
             }
 
-            Map<String, Object> statusResp = getLoginStatus(uuid);
+            Map<String, String> statusResp = getLoginStatus(uuid);
             String status = (String) statusResp.get("status");
             if (!status.equals(lastStatus)) {
                 logger.info("当前扫码状态: {}", status);
@@ -317,7 +354,7 @@ public class UuutalkApiClient {
         }
 
         // 3. 用 auth_code 完成登录
-        Map<String, Object> loginResp = loginWithAuthCode(authCode);
+        Map<String, String> loginResp = loginWithAuthCode(authCode);
         logger.info("扫码登录完成");
         return loginResp;
     }
