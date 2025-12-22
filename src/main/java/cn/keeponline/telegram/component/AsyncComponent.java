@@ -1,9 +1,5 @@
 package cn.keeponline.telegram.component;
 
-import cn.keeponline.telegram.dto.FriendDTO;
-import cn.keeponline.telegram.dto.GroupDTO;
-import cn.keeponline.telegram.dto.GroupInfo;
-import cn.keeponline.telegram.dto.YResponse;
 import cn.keeponline.telegram.dto.uuudto.UUUGroupDTO;
 import cn.keeponline.telegram.entity.SendRecord;
 import cn.keeponline.telegram.entity.UserInfo;
@@ -12,10 +8,7 @@ import cn.keeponline.telegram.mapper.SendRecordMapper;
 import cn.keeponline.telegram.mapper.UserInfoMapper;
 import cn.keeponline.telegram.mapper.UserPackageMapper;
 import cn.keeponline.telegram.talktools.services.UuutalkApiClient;
-import cn.keeponline.telegram.test.SendMessage;
 import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
-import com.alibaba.fastjson2.TypeReference;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -52,7 +45,10 @@ public class AsyncComponent {
             Map<String, String> map = uuutalkApiClient.getLoginStatus(uuid);
             String status = map.get("status");
             log.info("status: {}", status);
-            if ("authed".equals(status)) {
+
+            if ("expired".equals(status)) {
+                break;
+            } else if ("authed".equals(status)) {
                 log.info("【uuutalk】login success");
                 String authCode = map.get("auth_code");
                 Map<String, String> authMap = uuutalkApiClient.loginWithAuthCode(authCode);

@@ -152,7 +152,6 @@ public class TaskServiceImpl implements TaskService {
     @Async("asyncTaskExecutor")
     public void asyncRestartTask(UserTask userTask) throws Exception {
         String uid = userTask.getUid();
-        String messageContent = userTask.getMessageContent();
         Integer cvsType = userTask.getCvsType();
         UserInfo userInfo = userInfoMapper.getByUid(uid);
         if (userInfo == null) {
@@ -185,10 +184,15 @@ public class TaskServiceImpl implements TaskService {
         if (cvsType == 2) {
             List<UUUGroupDTO> groupsList = uuutalkApiClient.getGroups(token);
             for (UUUGroupDTO uuuGroupDTO : groupsList) {
+                Integer forbidden = uuuGroupDTO.getForbidden();
+                Integer role = uuuGroupDTO.getRole();
+                if (forbidden == 1 && role == 0) { // 这个是禁言并且自己不是管理员，这些群就不要发消息了
+                    continue;
+                }
                 SendGeneralDTO sendGeneralDTO = new SendGeneralDTO();
                 sendGeneralDTO.setId(uuuGroupDTO.getGroup_no());
                 sendGeneralDTO.setName(uuuGroupDTO.getName());
-                sendGeneralDTO.setForbidden(uuuGroupDTO.getForbidden());
+                sendGeneralDTO.setForbidden(forbidden);
                 sendGeneralDTO.setChannelType(2);
                 list.add(sendGeneralDTO);
             }

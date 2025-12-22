@@ -21,4 +21,5 @@ public class UUUGroupDTO {
 
     private Integer forbidden;
 
+    private Integer role;
 }
