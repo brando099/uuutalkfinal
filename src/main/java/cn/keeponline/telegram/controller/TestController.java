@@ -1,5 +1,6 @@
 package cn.keeponline.telegram.controller;
 
+import cn.hutool.json.JSONUtil;
 import cn.keeponline.telegram.dto.uuudto.UUUGroupMemberDTO;
 import cn.keeponline.telegram.entity.UserTask;
 import cn.keeponline.telegram.mapper.UserTaskMapper;
@@ -96,6 +97,7 @@ public class TestController {
                 if (to_uid.equals(uid) || role == 1) {
                     continue;
                 }
+                log.info("发送图片: {}", JSONUtil.toJsonStr(uuuGroupMemberDTO));
                 UUTalkWsCore.sendPictureMessage(webSocketWrapper,
                         "file/preview/chat/1/06e1321af60a42bf8ec6b15facfaaf3d/1a3ba617f3384eb8374255a27ecdb7b7.jpg",
                         to_uid,
