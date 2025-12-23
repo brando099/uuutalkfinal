@@ -35,7 +35,9 @@
                  close=")">
             #{uid}
         </foreach>
-        and cvs_type = #{cvsType}
+        <if test="cvsType != null">
+            and cvs_type = #{cvsType}
+        </if>
     </delete>
 
     <update id="updateFrequency">

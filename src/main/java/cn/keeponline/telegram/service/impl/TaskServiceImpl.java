@@ -13,6 +13,7 @@ import cn.keeponline.telegram.entity.MsgRecord;
 import cn.keeponline.telegram.entity.SendRecord;
 import cn.keeponline.telegram.entity.UserInfo;
 import cn.keeponline.telegram.entity.UserTask;
+import cn.keeponline.telegram.exception.BizzRuntimeException;
 import cn.keeponline.telegram.input.*;
 import cn.keeponline.telegram.mapper.MsgRecordMapper;
 import cn.keeponline.telegram.mapper.UserInfoMapper;
@@ -109,7 +110,7 @@ public class TaskServiceImpl implements TaskService {
             return;
         }
         // 删除这些uid的所有群组任务
-        int delCount = userTaskMapper.deleteByUidsAndCvsType(uids, cvsType);
+        int delCount = userTaskMapper.deleteByUidsAndCvsType(uids, null);
         log.info("删除任务数量: {}", delCount);
 
         UserInfo userInfo = userInfos.get(0);
@@ -316,12 +317,12 @@ public class TaskServiceImpl implements TaskService {
         String accountId = sysUserContext.getAccountId();
         UserTask userTask = userTaskMapper.getByAccountIdAndUidAndCvsType(accountId, uid, cvsType);
         if (userTask == null) {
-//            throw new BizzRuntimeException("未找到对应的任务");
+            throw new BizzRuntimeException("未找到对应的任务");
         }
-        if (userTask != null) {
-            userTaskMapper.deleteById(userTask.getId());
-        }
+        userTaskMapper.deleteById(userTask.getId());
         statusMap.remove(uid);
+        WebSocketWrapper ws = uuuSocketMap.remove(uid);
+        ws.close();
     }
 
     @Override
