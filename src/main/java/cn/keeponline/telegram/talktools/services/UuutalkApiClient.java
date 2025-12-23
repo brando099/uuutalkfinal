@@ -2,9 +2,7 @@ package cn.keeponline.telegram.talktools.services;
 
 import cn.hutool.Hutool;
 import cn.hutool.http.HttpUtil;
-import cn.keeponline.telegram.dto.uuudto.UUUFriendDTO;
-import cn.keeponline.telegram.dto.uuudto.UUUGroupDTO;
-import cn.keeponline.telegram.dto.uuudto.UUUGroupVO;
+import cn.keeponline.telegram.dto.uuudto.*;
 import cn.keeponline.telegram.exception.BizzRuntimeException;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
@@ -34,6 +32,9 @@ public class UuutalkApiClient {
     private static final Logger logger = Logging.getLogger(UuutalkApiClient.class);
     public static String BASE_URL = "https://api.uutalk.co/v1";
     private static final String WEB_ORIGIN = "https://web.uuutalk.co";
+
+    public static String REGION_URL = "https://region.uuutalk.cc/region.json";
+    public static String REGION_URL_2 = "https://region-appconfig.oss-cn-beijing.aliyuncs.com/config/region.json";
 
     private final UuutalkConfig config;
     private final OkHttpClient client;
@@ -222,6 +223,55 @@ public class UuutalkApiClient {
     /**
      * 获取用户群聊
      */
+    public List<UUURegionDTO> getRegions() throws IOException {
+        String path = "";
+        Map<String, String> params = new LinkedHashMap<>();
+
+        Map<String, String> headers = buildHeaders("GET", path, params, null, null);
+
+        HttpUrl url = HttpUrl.parse(REGION_URL + path).newBuilder()
+                .build();
+
+        Request request = new Request.Builder()
+                .url(url)
+                .headers(Headers.of(headers))
+                .get()
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                return null;
+            }
+            return JSON.parseObject(response.body().string(), UUURegionVO.class).getApi_addrs();
+        }
+    }
+
+    /**
+     * 获取用户群聊
+     */
+    public List<UUURegionDTO> getRegions2() throws IOException {
+        String path = "";
+        Map<String, String> params = new LinkedHashMap<>();
+
+        Map<String, String> headers = buildHeaders("GET", path, params, null, null);
+
+        HttpUrl url = HttpUrl.parse(REGION_URL_2 + path).newBuilder()
+                .build();
+
+        Request request = new Request.Builder()
+                .url(url)
+                .headers(Headers.of(headers))
+                .get()
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                return null;
+            }
+            return JSON.parseObject(response.body().string(), UUURegionVO.class).getApi_addrs();
+        }
+    }
+
     public List<UUUGroupDTO> getGroups(String token) throws IOException {
         String path = "/group/page/mine";
         Map<String, String> params = new LinkedHashMap<>();

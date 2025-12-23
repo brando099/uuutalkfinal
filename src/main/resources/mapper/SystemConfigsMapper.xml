@@ -5,4 +5,8 @@
     <select id="getByKey" resultType="cn.keeponline.telegram.entity.SystemConfigs">
         select * from system_configs where `key` = #{key}
     </select>
+
+    <update id="updateByKey">
+        update system_configs set value = #{value} where `key` = #{key}
+    </update>
 </mapper>

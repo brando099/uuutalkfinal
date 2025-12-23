@@ -7,4 +7,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface SystemConfigsMapper extends BaseMapper<SystemConfigs> {
     SystemConfigs getByKey(String key);
+
+    int updateByKey(String key, String value);
 }

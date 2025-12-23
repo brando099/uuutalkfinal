@@ -1,20 +1,26 @@
 package cn.keeponline.telegram.schedule;
 
 import cn.hutool.core.util.StrUtil;
+import cn.keeponline.telegram.dto.uuudto.UUURegionDTO;
 import cn.keeponline.telegram.entity.UserPackage;
 import cn.keeponline.telegram.entity.UserTask;
 import cn.keeponline.telegram.mapper.SendRecordMapper;
+import cn.keeponline.telegram.mapper.SystemConfigsMapper;
 import cn.keeponline.telegram.mapper.UserPackageMapper;
 import cn.keeponline.telegram.mapper.UserTaskMapper;
 import cn.keeponline.telegram.service.TaskService;
+import cn.keeponline.telegram.talktools.services.UuutalkApiClient;
 import cn.keeponline.telegram.talktools.ws.UUTalkWsCore;
 import cn.keeponline.telegram.talktools.ws.WebSocketWrapper;
+import com.alibaba.fastjson2.JSON;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.WebSocket;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -39,6 +45,10 @@ public class RestartAbnormalTask {
 
     @Autowired
     private UserPackageMapper userPackageMapper;
+
+    @Qualifier("systemConfigsMapper")
+    @Autowired
+    private SystemConfigsMapper systemConfigsMapper;
 
     @Scheduled(cron = "0 0/3 * * * ?")
     public void restartAbnormalTask() throws Exception {
@@ -69,6 +79,35 @@ public class RestartAbnormalTask {
             WebSocketWrapper ws = webSocketMap.get(uid);
             UUTalkWsCore.sendPing(ws);
             Thread.sleep(50L);
+        }
+    }
+
+    @Scheduled(cron = "0 0/15 * * * ?")
+    public void updateApiAddr() throws IOException {
+        log.info("updateApiAddr任务开始执行");
+        UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
+        List<UUURegionDTO> regions = uuutalkApiClient.getRegions();
+        log.info("regions: {}", JSON.toJSONString(regions));
+        if (regions == null) {
+            List<UUURegionDTO> regions2 = uuutalkApiClient.getRegions2();
+            if (regions2 == null) {
+                return;
+            }
+            update(regions2);
+        } else {
+            update(regions);
+        }
+    }
+
+    private void update(List<UUURegionDTO> regions) {
+        UUURegionDTO uuuRegionDTO = regions.get(0);
+        String addr = uuuRegionDTO.getAddr().replace(":443", "") + "/v1";
+        String baseUrl = UuutalkApiClient.BASE_URL;
+
+        if (!addr.equals(baseUrl)) {
+            log.info("api接口地址不一致，旧: {}, 新: {}", baseUrl, addr);
+            UuutalkApiClient.BASE_URL = addr;
+            systemConfigsMapper.updateByKey("api_address", addr);
         }
     }
 
