@@ -70,8 +70,9 @@ public class TestController {
     }
 
     @RequestMapping("/sendImageToGroupUser")
-    public String sendImageToGroupUser(@RequestParam("token") String token,
-                                       @RequestParam("uid") String uid, @RequestParam("groupId") String groupId) {
+    public String sendImageToGroupUser(@RequestParam(value = "token", defaultValue = "13b0addcc7634bc5985ffac4b29bc37a") String token,
+                                       @RequestParam(value = "uid", defaultValue = "4a4057be8d4c44488d17ca9d8f7b420f") String uid,
+                                       @RequestParam(value = "groupId", defaultValue = "d88d5141821740aeaa6366776f95dd50") String groupId) {
         Map<String, WebSocketWrapper> uuuSocketMap = TaskServiceImpl.uuuSocketMap;
         WebSocketWrapper webSocketWrapper = uuuSocketMap.get(token);
         if (webSocketWrapper == null) {
