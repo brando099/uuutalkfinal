@@ -17,7 +17,6 @@ import cn.keeponline.telegram.service.SysUserService;
 import cn.keeponline.telegram.utils.GoogleAuthenticator;
 import cn.keeponline.telegram.utils.Json2;
 import cn.keeponline.telegram.utils.Jwt2;
-import cn.keeponline.telegram.utils.SnowflakeIdUtils;
 import cn.keeponline.telegram.vo.GetGoogleTokenVO;
 import cn.keeponline.telegram.vo.SysUserLoginVO;
 import cn.keeponline.telegram.vo.UpdatePasswordVO;
@@ -98,11 +97,16 @@ public class SysUserServiceImpl implements SysUserService {
      */
     @Override
     public SysUser insert(SysUserInsertInput sysUserInsertInput) {
+        String username = sysUserInsertInput.getUsername();
+        SysUser sysUserInDB = sysUserMapper.getByOutId(username);
+        if (sysUserInDB != null) {
+            throw new BizzRuntimeException("该账号已被占用");
+        }
+
         SysUser sysUser = new SysUser();
         BeanUtils.copyProperties(sysUserInsertInput, sysUser);
 
-        String password = DigestUtils.md5DigestAsHex((sysUserInsertInput.getPassword() + sysUserInsertInput.getUsername()).getBytes());
-        String username = sysUser.getUsername();
+        String password = DigestUtils.md5DigestAsHex((sysUserInsertInput.getPassword() + username).getBytes());
         sysUser.setOutId(username);
         sysUser.setPassword(password);
         sysUser.setStatus(0);
