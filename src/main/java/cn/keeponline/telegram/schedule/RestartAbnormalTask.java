@@ -7,6 +7,8 @@ import cn.keeponline.telegram.mapper.SendRecordMapper;
 import cn.keeponline.telegram.mapper.UserPackageMapper;
 import cn.keeponline.telegram.mapper.UserTaskMapper;
 import cn.keeponline.telegram.service.TaskService;
+import cn.keeponline.telegram.talktools.ws.UUTalkWsCore;
+import cn.keeponline.telegram.talktools.ws.WebSocketWrapper;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.WebSocket;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 import static cn.keeponline.telegram.service.impl.TaskServiceImpl.WebSocketMap;
+import static cn.keeponline.telegram.service.impl.TaskServiceImpl.uuuSocketMap;
 
 @Component
 @Slf4j
@@ -60,17 +63,12 @@ public class RestartAbnormalTask {
     @Scheduled(cron = "0 0/2 * * * ?")
     public void sendPing() throws InterruptedException {
         log.info("sendPing任务开始执行");
-        Map<String, WebSocket> webSocketMap = WebSocketMap;
+        Map<String, WebSocketWrapper> webSocketMap = uuuSocketMap;
         log.info("socket数量: {}", webSocketMap.size());
         for (String uid : webSocketMap.keySet()) {
-            WebSocket ws = webSocketMap.get(uid);
-            String pingMsg = """
-                    {"header":{"sm":1,"ver":10,"uid":"{uid}","cmdtype":"g.ping"},"body":{"uid":"{uid}","timestamp":{timestamp}}}
-                    """
-                    .replace("{uid}", uid)
-                    .replace("{timestamp}", new Date().getTime() / 1000 + "");
-            ws.send(pingMsg);
-            Thread.sleep(500L);
+            WebSocketWrapper ws = webSocketMap.get(uid);
+            UUTalkWsCore.sendPing(ws);
+            Thread.sleep(50L);
         }
     }
 

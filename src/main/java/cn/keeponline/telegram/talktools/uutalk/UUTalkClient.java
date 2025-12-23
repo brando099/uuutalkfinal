@@ -146,8 +146,8 @@ public class UUTalkClient {
                 }
                 statusMap.put(uid, 0);
             }
-
         });
+
         // 连接
         ws.connect();
         return ws;

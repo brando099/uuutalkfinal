@@ -180,6 +180,20 @@ public final class UUTalkWsCore {
 
         return packet;
     }
+
+    public static boolean sendPing(
+            WebSocketWrapper ws
+    ) {
+
+        Map<String, Object> packet = new HashMap<>();
+        packet.put("packetType", PacketType.PING);
+
+        PacketEncoder encoder = new PacketEncoder();
+        byte[] raw = encoder.encode(packet);
+
+        logger.info("发送 PING 消息, 字节长度={}", raw.length);
+        return ws.send(raw);
+    }
 }
 
 

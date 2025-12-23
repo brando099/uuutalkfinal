@@ -1,14 +1,10 @@
 package cn.keeponline.telegram.talktools.ws;
 
-import cn.keeponline.telegram.talktools.cache.GlobalCache;
-import cn.keeponline.telegram.talktools.core.PacketEncoder;
 import cn.keeponline.telegram.talktools.logging.Logging;
 import lombok.Data;
 import okhttp3.*;
 import org.slf4j.Logger;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -75,6 +71,9 @@ public class WebSocketWrapper {
             @Override
             public void onClosing(WebSocket webSocket, int code, String reason) {
                 logger.info("WebSocket closing: {} {}", code, reason);
+                if (!destroy && onCloseCallback != null) {
+                    onCloseCallback.onClose(code, reason);
+                }
             }
 
             @Override
@@ -83,20 +82,23 @@ public class WebSocketWrapper {
                 if (!destroy && onCloseCallback != null) {
                     onCloseCallback.onClose(code, reason);
                 }
-                if (!destroy && reconnect) {
-                    scheduleReconnect();
-                }
+//                if (!destroy && reconnect) {
+//                    scheduleReconnect();
+//                }
             }
 
             @Override
             public void onFailure(WebSocket webSocket, Throwable t, Response response) {
                 logger.error("WebSocket error", t);
-                if (!destroy && onErrorCallback != null) {
-                    onErrorCallback.onError(t);
+                if (!destroy && onCloseCallback != null) {
+                    onCloseCallback.onClose(1001, "代码错误");
                 }
-                if (!destroy && reconnect) {
-                    scheduleReconnect();
-                }
+//                if (!destroy && onErrorCallback != null) {
+//                    onErrorCallback.onError(t);
+//                }
+//                if (!destroy && reconnect) {
+//                    scheduleReconnect();
+//                }
             }
         });
     }

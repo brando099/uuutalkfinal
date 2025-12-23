@@ -59,7 +59,7 @@ public class Main {
 
             // 2. 启动 WebSocket 客户端
             System.out.println("准备连接 IM WebSocket 服务...");
-            UUTalkClient.runWsClient(uid, token);
+//            UUTalkClient.runWsClient(uid, token);
 
         } catch (Exception e) {
             logger.error("发生错误", e);

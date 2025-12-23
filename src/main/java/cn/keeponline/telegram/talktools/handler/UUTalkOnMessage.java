@@ -22,7 +22,7 @@ public class UUTalkOnMessage {
     public static void onPacket(byte[] rawBytes, WebSocketWrapper ws) {
         try {
             Map<String, Object> packet = decoder.decode(rawBytes);
-            logger.debug("收到包内容: {}", packet);
+//            logger.debug("收到包内容: {}", packet);
         } catch (Exception e) {
             logger.error("解码失败", e);
             return;
@@ -30,7 +30,7 @@ public class UUTalkOnMessage {
 
         Map<String, Object> packet = decoder.decode(rawBytes);
         PacketType packetType = (PacketType) packet.get("packetType");
-        logger.info("收到包类型: {}", packetType);
+//        logger.info("收到包类型: {}", packetType);
 
         // CONNACK 处理
         if (packetType == PacketType.CONNACK) {
@@ -42,14 +42,14 @@ public class UUTalkOnMessage {
         if (packetType == PacketType.PONG) {
             long now = System.currentTimeMillis();
             long delay = ShareManager.pingTime > 0 ? now - ShareManager.pingTime : -1;
-            logger.info("收到 PONG，网络延迟约 {} ms", delay);
+//            logger.info("收到 PONG，网络延迟约 {} ms", delay);
             ShareManager.pingRetryCount = 0;
             return;
         }
 
         // DISCONNECT 处理
         if (packetType == PacketType.DISCONNECT) {
-            logger.warn("连接被踢");
+//            logger.warn("连接被踢");
             return;
         }
 
@@ -58,10 +58,10 @@ public class UUTalkOnMessage {
     }
 
     private static void handleConnack(Map<String, Object> packet, WebSocketWrapper ws) {
-        logger.info("CONNACK 内容:");
+//        logger.info("CONNACK 内容:");
         String nodeId = String.valueOf(packet.getOrDefault("nodeId", ""));
         Integer reasonCode = (Integer) packet.get("reasonCode");
-        logger.info("成功连接到节点[{}], reasonCode={}", nodeId, reasonCode);
+//        logger.info("成功连接到节点[{}], reasonCode={}", nodeId, reasonCode);
 
         if (reasonCode != null && reasonCode == 1) {
             try {
@@ -77,7 +77,7 @@ public class UUTalkOnMessage {
 
                 GlobalCache.shareMap.put(ws.getUid(), shareManager);
 
-                logger.info("[CONNACK] AES 解密环境准备完成");
+//                logger.info("[CONNACK] AES 解密环境准备完成");
             } catch (Exception e) {
                 logger.error("推导 AES Key/IV 失败", e);
             }
@@ -87,7 +87,7 @@ public class UUTalkOnMessage {
     }
 
     private static void onPacketHandler(Map<String, Object> packet, WebSocketWrapper ws) {
-        logger.info("收到消息包...: {}", packet);
+//        logger.info("收到消息包...: {}", packet);
 
         if (packet.get("packetType") == PacketType.SENDACK) {
             return;
@@ -108,7 +108,7 @@ public class UUTalkOnMessage {
         try {
             byte[] plain = UUTalkTool.decryptPayloadBase64(shareManager.aesKey, shareManager.aesIv, payload);
             String text = new String(plain, StandardCharsets.UTF_8);
-            logger.info("解密文本: {}", text);
+//            logger.info("解密文本: {}", text);
         } catch (Exception e) {
             logger.error("解密失败", e);
         }
