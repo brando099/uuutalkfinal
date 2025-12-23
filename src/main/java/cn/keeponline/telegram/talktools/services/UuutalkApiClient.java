@@ -2,6 +2,7 @@ package cn.keeponline.telegram.talktools.services;
 
 import cn.keeponline.telegram.dto.uuudto.UUUFriendDTO;
 import cn.keeponline.telegram.dto.uuudto.UUUGroupDTO;
+import cn.keeponline.telegram.dto.uuudto.UUUGroupMemberDTO;
 import cn.keeponline.telegram.dto.uuudto.UUUGroupVO;
 import com.alibaba.fastjson2.JSON;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -419,6 +420,56 @@ public class UuutalkApiClient {
             return odt.toInstant().getEpochSecond();
         } catch (DateTimeParseException ignore) {
             return null;
+        }
+    }
+
+    /**
+     * 拉取群成员列表（全量 / 增量同步）
+     * GET /v1/groups/{group_id}/membersync
+     *
+     * @param groupId 群 ID（如 a742c01351e64d81be81c63e533be439）
+     * @param token   鉴权 token
+     * @param version 增量版本号，0 表示全量
+     * @param limit   返回成员上限
+     */
+    public List<UUUGroupMemberDTO> syncGroupMembers(
+            String groupId,
+            String token,
+            Object version,
+            int limit
+    ) throws IOException {
+
+        String path = "/groups/" + groupId + "/membersync";
+
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("version", String.valueOf(version));
+        params.put("limit", String.valueOf(limit));
+
+        Map<String, String> headers = buildHeaders("GET", path, params, null, token);
+
+        HttpUrl url = HttpUrl.parse(BASE_URL + path).newBuilder()
+                .addQueryParameter("version", String.valueOf(version))
+                .addQueryParameter("limit", String.valueOf(limit))
+                .build();
+
+        Request request = new Request.Builder()
+                .url(url)
+                .headers(Headers.of(headers))
+                .get()
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            logger.info("groups/membersync status={}", response.code());
+
+            if (!response.isSuccessful()) {
+                throw new IOException("Unexpected code " + response);
+            }
+
+            String body = response.body() != null ? response.body().string() : "{}";
+            return objectMapper.readValue(
+                    body,
+                    new com.fasterxml.jackson.core.type.TypeReference<List<UUUGroupMemberDTO>>() {}
+            );
         }
     }
 }
