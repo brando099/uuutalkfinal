@@ -34,7 +34,8 @@ public class UUTalkClient {
     private UserTaskMapper userTaskMapper;
 
     private static final Logger logger = Logging.getLogger(UUTalkClient.class);
-    private static final String WS_URL = "wss://ws.uuutalk.cc/";
+//    private static final String WS_URL = "wss://ws.uuutalk.cc/";
+    public static String WS_URL = "wss://ws.uutalk.co/";
     private static final UUTalkGlobalConfig GLOBAL_CONFIG = new UUTalkGlobalConfig();
 
     /**

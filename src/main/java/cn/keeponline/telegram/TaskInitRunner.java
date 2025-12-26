@@ -6,6 +6,7 @@ import cn.keeponline.telegram.mapper.SystemConfigsMapper;
 import cn.keeponline.telegram.mapper.UserTaskMapper;
 import cn.keeponline.telegram.service.TaskService;
 import cn.keeponline.telegram.talktools.services.UuutalkApiClient;
+import cn.keeponline.telegram.talktools.uutalk.UUTalkClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,5 +39,8 @@ public class TaskInitRunner implements ApplicationRunner {
         }
         SystemConfigs systemConfigs = systemConfigsMapper.getByKey("api_address");
         UuutalkApiClient.BASE_URL = systemConfigs.getValue();
+
+        SystemConfigs wsAddress = systemConfigsMapper.getByKey("ws_address");
+        UUTalkClient.WS_URL = wsAddress.getValue();
     }
 }
