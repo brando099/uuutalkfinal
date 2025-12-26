@@ -2,11 +2,13 @@ package cn.keeponline.telegram.talktools.services;
 
 import cn.keeponline.telegram.dto.uuudto.UUUFriendDTO;
 import cn.keeponline.telegram.dto.uuudto.UUUGroupDTO;
-import cn.keeponline.telegram.dto.uuudto.UUUGroupMemberDTO;
 import cn.keeponline.telegram.dto.uuudto.UUUGroupVO;
+import cn.keeponline.telegram.dto.uuudto.*;
 import com.alibaba.fastjson2.JSON;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import cn.keeponline.telegram.talktools.logging.Logging;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import org.slf4j.Logger;
 
@@ -26,10 +28,14 @@ import java.util.concurrent.TimeUnit;
  * UUTalk API 客户端
  * 注意：WASM 签名功能需要额外实现（可通过 JNI 或 GraalVM）
  */
+@Slf4j
 public class UuutalkApiClient {
     private static final Logger logger = Logging.getLogger(UuutalkApiClient.class);
     public static String BASE_URL = "https://api.uutalk.co/v1";
     private static final String WEB_ORIGIN = "https://web.uuutalk.co";
+
+    public static String REGION_URL = "https://region.uuutalk.cc/region.json";
+    public static String REGION_URL_2 = "https://region-appconfig.oss-cn-beijing.aliyuncs.com/config/region.json";
 
     private final UuutalkConfig config;
     private final OkHttpClient client;
@@ -62,7 +68,7 @@ public class UuutalkApiClient {
     /**
      * 签名方法（基于 WASM 实现）
      */
-    private String sign(String a, String timestamp, String nonce, String token) {
+    public String sign(String a, String timestamp, String nonce, String token) {
         try {
             return wasmSigner.sign(a, timestamp, nonce, token);
         } catch (Exception e) {
@@ -115,7 +121,7 @@ public class UuutalkApiClient {
                     if (data instanceof Map || data instanceof List) {
                         return objectMapper.writeValueAsString(data);
                     } else if (data instanceof String) {
-                        return "{}";
+                        return data.toString();
                     }
                 } catch (Exception e) {
                     logger.error("Failed to serialize data", e);
@@ -160,8 +166,9 @@ public class UuutalkApiClient {
 
         String fullUrl = BASE_URL + urlPath;
         String a = buildAString(method, params, data, fullUrl);
-
+        log.info("aaaa: {}", a);
         String sig = sign(a, tsStr, nonce, token);
+        log.info("sig: {}", sig);
         headers.put("x-signature", sig);
 
         return headers;
@@ -183,6 +190,27 @@ public class UuutalkApiClient {
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful()) {
                 throw new IOException("Unexpected code " + response);
+            }
+            return objectMapper.readValue(response.body().string(), Map.class);
+        }
+    }
+
+    /**
+     * 获取登录 UUID 和二维码
+     */
+    public Map<String, String> ping() throws IOException {
+        String path = "/ping";
+        Map<String, String> headers = buildHeaders("GET", path, null, null, null);
+
+        Request request = new Request.Builder()
+                .url(BASE_URL + path)
+                .headers(Headers.of(headers))
+                .get()
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                return null;
             }
             return objectMapper.readValue(response.body().string(), Map.class);
         }
@@ -218,18 +246,13 @@ public class UuutalkApiClient {
     /**
      * 获取用户群聊
      */
-    public List<UUUGroupDTO> getGroups(String token) throws IOException {
-        String path = "/group/page/mine";
+    public List<UUURegionDTO> getRegions() throws IOException {
+        String path = "";
         Map<String, String> params = new LinkedHashMap<>();
-        params.put("page_size", 20 + "");
-        params.put("page_index", 1 + "");
-        params.put("keyword", "");
-        Map<String, String> headers = buildHeaders("GET", path, params, null, token);
 
-        HttpUrl url = HttpUrl.parse(BASE_URL + path).newBuilder()
-                .addQueryParameter("page_size", "20")
-                .addQueryParameter("page_index", "1")
-                .addQueryParameter("keyword", "")
+        Map<String, String> headers = buildHeaders("GET", path, params, null, null);
+
+        HttpUrl url = HttpUrl.parse(REGION_URL + path).newBuilder()
                 .build();
 
         Request request = new Request.Builder()
@@ -240,10 +263,86 @@ public class UuutalkApiClient {
 
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                throw new IOException("Unexpected code " + response);
+                return null;
             }
-            return JSON.parseObject(response.body().string(), UUUGroupVO.class).getList();
+            return JSON.parseObject(response.body().string(), UUURegionVO.class).getApi_addrs();
         }
+    }
+
+    /**
+     * 获取用户群聊
+     */
+    public List<UUURegionDTO> getRegions2() throws IOException {
+        String path = "";
+        Map<String, String> params = new LinkedHashMap<>();
+
+        Map<String, String> headers = buildHeaders("GET", path, params, null, null);
+
+        HttpUrl url = HttpUrl.parse(REGION_URL_2 + path).newBuilder()
+                .build();
+
+        Request request = new Request.Builder()
+                .url(url)
+                .headers(Headers.of(headers))
+                .get()
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                return null;
+            }
+            return JSON.parseObject(response.body().string(), UUURegionVO.class).getApi_addrs();
+        }
+    }
+
+
+    public List<UUUGroupDTO> getGroups(String token) throws IOException {
+        String path = "/group/page/mine";
+        int pageSize = 20;
+        int pageIndex = 1;
+        List<UUUGroupDTO> allGroups = new ArrayList<>();
+
+        while (true) {
+            Map<String, String> params = new LinkedHashMap<>();
+            params.put("page_size", String.valueOf(pageSize));
+            params.put("page_index", String.valueOf(pageIndex));
+            params.put("keyword", "");
+            Map<String, String> headers = buildHeaders("GET", path, params, null, token);
+
+            HttpUrl url = HttpUrl.parse(BASE_URL + path).newBuilder()
+                    .addQueryParameter("page_size", String.valueOf(pageSize))
+                    .addQueryParameter("page_index", String.valueOf(pageIndex))
+                    .addQueryParameter("keyword", "")
+                    .build();
+
+            Request request = new Request.Builder()
+                    .url(url)
+                    .headers(Headers.of(headers))
+                    .get()
+                    .build();
+
+            try (Response response = client.newCall(request).execute()) {
+                if (!response.isSuccessful()) {
+                    throw new IOException("Unexpected code " + response);
+                }
+                String string = response.body().string();
+                System.out.println("string: {}" + string);
+                List<UUUGroupDTO> pageGroups =
+                        JSON.parseObject(string, UUUGroupVO.class).getList();
+
+                if (pageGroups == null || pageGroups.isEmpty()) {
+                    break;
+                }
+                allGroups.addAll(pageGroups);
+                if (pageGroups.size() < pageSize) {
+                    break;
+                }
+
+            }
+            pageIndex++;
+        }
+
+        return allGroups;
     }
 
 
@@ -288,6 +387,31 @@ public class UuutalkApiClient {
                 .url(BASE_URL + path)
                 .headers(Headers.of(headers))
                 .post(RequestBody.create("{}", MediaType.get("application/json")))
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new IOException("Unexpected code " + response);
+            }
+            return objectMapper.readValue(response.body().string(), Map.class);
+        }
+    }
+
+    /**
+     * 创建零时空间
+     */
+    public Map<String, String> createStranger(String to_uid, String token) throws IOException {
+        // 1. 构造 JSON body
+        ObjectNode body = objectMapper.createObjectNode();
+        body.put("to_uid", to_uid);
+        String jsonBody = body.toString();
+        log.info("jsonBody: {}", jsonBody);
+        String path = "/user/stranger/create";
+        Map<String, String> headers = buildHeaders("POST", path, null, jsonBody, token);
+        Request request = new Request.Builder()
+                .url(BASE_URL + path)
+                .headers(Headers.of(headers))
+                .post(RequestBody.create(jsonBody, MediaType.get("application/json")))
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
@@ -472,5 +596,10 @@ public class UuutalkApiClient {
             );
         }
     }
-}
 
+    public static void main(String[] args) throws IOException {
+        UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
+        List<UUUGroupDTO> groups = uuutalkApiClient.getGroups("793a968bbcba415ebb2daadf0edc5abf");
+        System.out.println(groups);
+    }
+}

@@ -86,6 +86,12 @@ public class RestartAbnormalTask {
     public void updateApiAddr() throws IOException {
         log.info("updateApiAddr任务开始执行");
         UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
+
+        Map<String, String> ping = uuutalkApiClient.ping();
+        if (ping != null) {
+            log.info("地址可以访问");
+            return;
+        }
         List<UUURegionDTO> regions = uuutalkApiClient.getRegions();
         log.info("regions: {}", JSON.toJSONString(regions));
         if (regions == null) {
@@ -99,16 +105,23 @@ public class RestartAbnormalTask {
         }
     }
 
-    private void update(List<UUURegionDTO> regions) {
-        UUURegionDTO uuuRegionDTO = regions.get(0);
-        String addr = uuuRegionDTO.getAddr().replace(":443", "") + "/v1";
-        String baseUrl = UuutalkApiClient.BASE_URL;
-
-        if (!addr.equals(baseUrl)) {
-            log.info("api接口地址不一致，旧: {}, 新: {}", baseUrl, addr);
+    private void update(List<UUURegionDTO> regions) throws IOException {
+        for (UUURegionDTO region : regions) {
+            String addr = region.getAddr().replace(":443", "") + "/v1";
             UuutalkApiClient.BASE_URL = addr;
-            systemConfigsMapper.updateByKey("api_address", addr);
+
+            UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
+            Map<String, String> ping = uuutalkApiClient.ping();
+            if (ping != null) {
+                log.info("地址可以访问，更新跳出: {}", addr);
+                systemConfigsMapper.updateByKey("api_address", addr);
+                break;
+            } else {
+                log.info("地址无法访问: {}", addr);
+            }
         }
+
+
     }
 
     @Scheduled(cron = "0 0 * * * ?")

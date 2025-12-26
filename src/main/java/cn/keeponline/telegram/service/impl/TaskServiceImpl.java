@@ -277,7 +277,7 @@ public class TaskServiceImpl implements TaskService {
         Integer channelType = dto.getChannelType();
 
 
-        boolean send;
+        boolean send = true;
         if (StrUtil.isBlank(fileName)) {
             send = UUTalkWsCore.sendTextMessage(ws, content, gid, channelType, uid);
         } else {
@@ -322,7 +322,9 @@ public class TaskServiceImpl implements TaskService {
         userTaskMapper.deleteById(userTask.getId());
         statusMap.remove(uid);
         WebSocketWrapper ws = uuuSocketMap.remove(uid);
-        ws.close();
+        if (ws != null) {
+            ws.close();
+        }
     }
 
     @Override
@@ -336,6 +338,10 @@ public class TaskServiceImpl implements TaskService {
                 userTaskMapper.deleteById(userTask.getId());
                 log.info("删除成功: {}", uid);
                 statusMap.remove(uid);
+                WebSocketWrapper ws = uuuSocketMap.remove(uid);
+                if (ws != null) {
+                    ws.close();
+                }
             }
         }
 

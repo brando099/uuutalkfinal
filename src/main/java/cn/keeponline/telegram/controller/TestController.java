@@ -70,11 +70,11 @@ public class TestController {
     }
 
     @RequestMapping("/sendImageToGroupUser")
-    public String sendImageToGroupUser(@RequestParam(value = "token", defaultValue = "13b0addcc7634bc5985ffac4b29bc37a") String token,
-                                       @RequestParam(value = "uid", defaultValue = "4a4057be8d4c44488d17ca9d8f7b420f") String uid,
-                                       @RequestParam(value = "groupId", defaultValue = "d88d5141821740aeaa6366776f95dd50") String groupId) {
+    public String sendImageToGroupUser(@RequestParam(value = "token", defaultValue = "04a24819bce74ad894a416c0177bd67e") String token,
+                                       @RequestParam(value = "uid", defaultValue = "59ae5a30bcf34c349b135b9c8fccac86") String uid,
+                                       @RequestParam(value = "groupId", defaultValue = "e5c166e8f6044bc78f483bf0fdb4834a") String groupId) throws InterruptedException {
         Map<String, WebSocketWrapper> uuuSocketMap = TaskServiceImpl.uuuSocketMap;
-        WebSocketWrapper webSocketWrapper = uuuSocketMap.get(token);
+        WebSocketWrapper webSocketWrapper = uuuSocketMap.get(uid);
         if (webSocketWrapper == null) {
             return "ws 未连接";
         }
@@ -82,7 +82,7 @@ public class TestController {
         UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
         List<UUUGroupMemberDTO> uuuGroupMemberDTOS = new ArrayList<>();
         try {
-            uuuGroupMemberDTOS = uuutalkApiClient.syncGroupMembers(token, groupId, 0, 100);
+            uuuGroupMemberDTOS = uuutalkApiClient.syncGroupMembers(groupId, token, 0, 100);
         } catch (IOException e) {
             log.error("", e);
             return "拉取群成员失败";
@@ -98,6 +98,9 @@ public class TestController {
                 if (to_uid.equals(uid) || role == 1) {
                     continue;
                 }
+
+                Map<String, String> stranger = uuutalkApiClient.createStranger(to_uid, token);
+                log.info("strange: {}", stranger);
                 log.info("发送图片: {}", JSONUtil.toJsonStr(uuuGroupMemberDTO));
                 UUTalkWsCore.sendPictureMessage(webSocketWrapper,
                         "file/preview/chat/1/06e1321af60a42bf8ec6b15facfaaf3d/1a3ba617f3384eb8374255a27ecdb7b7.jpg",
@@ -107,8 +110,15 @@ public class TestController {
             } catch (Exception e) {
                 log.error("", e);
             }
+            Thread.sleep(50000L);
         }
         return "发送成功";
+    }
+
+    public static void main(String[] args) {
+        UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
+        String sign = uuutalkApiClient.sign("{\"to_uid\":\"ee88122e142540c7914749ce74e8b78f\"}", "1766663815064", "03f73736-1492-4adf-8c4a-dc5578e72429", "04a24819bce74ad894a416c0177bd67e");
+        System.out.println(sign);
     }
 
 
