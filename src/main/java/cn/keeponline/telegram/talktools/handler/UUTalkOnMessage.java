@@ -63,19 +63,21 @@ public class UUTalkOnMessage {
         Integer reasonCode = (Integer) packet.get("reasonCode");
 //        logger.info("成功连接到节点[{}], reasonCode={}", nodeId, reasonCode);
 
+        String uid = ws.getUid();
         if (reasonCode != null && reasonCode == 1) {
             try {
-                UUTalkTool tool = new UUTalkTool(ShareManager.DH_PRIVATE_KEY_BYTES);
-                String[] aes = tool.deriveAesFromConnack(packet, ShareManager.DH_PRIVATE_KEY_BYTES);
+                ShareManager shareManager = GlobalCache.shareMap.get(uid);
+                UUTalkTool tool = new UUTalkTool(shareManager.DH_PRIVATE_KEY_BYTES);
+                String[] aes = tool.deriveAesFromConnack(packet, shareManager.DH_PRIVATE_KEY_BYTES);
                 String aesKey = aes[0];
                 String aesIv = aes[1];
                 boolean aesReady = true;
-                ShareManager shareManager = new ShareManager();
+//                ShareManager shareManager = new ShareManager();
                 shareManager.setAesKey(aesKey);
                 shareManager.setAesIv(aesIv);
                 shareManager.setAesReady(aesReady);
 
-                GlobalCache.shareMap.put(ws.getUid(), shareManager);
+                GlobalCache.shareMap.put(uid, shareManager);
 
 //                logger.info("[CONNACK] AES 解密环境准备完成");
             } catch (Exception e) {

@@ -14,7 +14,7 @@ public class ShareManager {
     public static final String CLIENT_VERSION = "1.0.0";
 
     // DH 私钥
-    public static byte[] DH_PRIVATE_KEY_BYTES = new byte[32]; // 需要初始化
+    public byte[] DH_PRIVATE_KEY_BYTES = new byte[32]; // 需要初始化
 
     // 会话级 AES 状态
     public String aesKey = null;

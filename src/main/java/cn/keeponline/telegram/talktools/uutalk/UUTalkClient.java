@@ -2,6 +2,7 @@ package cn.keeponline.telegram.talktools.uutalk;
 
 import cn.keeponline.telegram.entity.UserTask;
 import cn.keeponline.telegram.mapper.UserTaskMapper;
+import cn.keeponline.telegram.talktools.cache.GlobalCache;
 import cn.keeponline.telegram.talktools.config.UUTalkGlobalConfig;
 import cn.keeponline.telegram.talktools.core.*;
 import cn.keeponline.telegram.talktools.handler.UUTalkOnMessage;
@@ -111,7 +112,11 @@ public class UUTalkClient {
                 byte[] privBytes = keypair[1];
 
                 // 保存 DH 私钥
-                ShareManager.DH_PRIVATE_KEY_BYTES = privBytes;
+//                ShareManager.DH_PRIVATE_KEY_BYTES = privBytes;
+                ShareManager shareManager = new ShareManager();
+                shareManager.setDH_PRIVATE_KEY_BYTES(privBytes);
+
+                GlobalCache.shareMap.put(uid, shareManager);
                 logger.debug("DH 私钥 hex={}", bytesToHex(privBytes));
 
                 // 2) 公钥 base64
