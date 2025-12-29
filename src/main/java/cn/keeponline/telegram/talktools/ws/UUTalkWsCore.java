@@ -51,7 +51,7 @@ public final class UUTalkWsCore {
 
         // 3. 构造发送包
         Map<String, Object> packet = buildSendPacket(msg, channel, null);
-        logger.info("发送消息体: {}", packet);
+//        logger.info("发送消息体: {}", packet);
 
         // 4. 编码并发送（需要 AES key/iv 已经从 CONNACK 推导完成）
         ShareManager shareManager = GlobalCache.shareMap.get(uid);
@@ -63,7 +63,7 @@ public final class UUTalkWsCore {
         PacketEncoder encoder = new PacketEncoder(shareManager.aesKey, shareManager.aesIv);
         byte[] raw = encoder.encode(packet);
 
-        logger.info("发送 SEND 消息, 字节长度={}", raw.length);
+//        logger.info("发送 SEND 消息, 字节长度={}", raw.length);
         return ws.send(raw);
     }
 
@@ -90,7 +90,7 @@ public final class UUTalkWsCore {
 
         // 3. 构造发送包
         Map<String, Object> packet = buildSendPacket(msg, channel, null);
-        logger.info("发送消息体: {}", packet);
+//        logger.info("发送消息体: {}", packet);
 
         // 4. 编码并发送（需要 AES key/iv 已经从 CONNACK 推导完成）
         ShareManager shareManager = GlobalCache.shareMap.get(uid);
@@ -102,7 +102,7 @@ public final class UUTalkWsCore {
         PacketEncoder encoder = new PacketEncoder(shareManager.aesKey, shareManager.aesIv);
         byte[] raw = encoder.encode(packet);
 
-        logger.info("发送 SEND 消息, 字节长度={}", raw.length);
+//        logger.info("发送 SEND 消息, 字节长度={}", raw.length);
         return ws.send(raw);
     }
 
@@ -162,7 +162,7 @@ public final class UUTalkWsCore {
             // 兜底：发送空 JSON
             payloadBytes = "{}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         }
-        logger.debug("[PAYLOAD] bytes={}", payloadBytes.length);
+//        logger.debug("[PAYLOAD] bytes={}", payloadBytes.length);
 
         // 3. 构造 SendPacket
         Map<String, Object> packet = new HashMap<>();
@@ -191,7 +191,7 @@ public final class UUTalkWsCore {
         PacketEncoder encoder = new PacketEncoder();
         byte[] raw = encoder.encode(packet);
 
-        logger.info("发送 PING 消息, 字节长度={}", raw.length);
+//        logger.info("发送 PING 消息, 字节长度={}", raw.length);
         return ws.send(raw);
     }
 }

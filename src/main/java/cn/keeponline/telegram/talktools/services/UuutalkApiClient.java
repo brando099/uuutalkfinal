@@ -597,9 +597,47 @@ public class UuutalkApiClient {
         }
     }
 
+    public List<UUUGroupMemberDTO> getUserInfo(
+            String groupId,
+            String token,
+            String uid
+
+    ) throws IOException {
+
+        String path = "/users/" + uid;
+
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("group_no", String.valueOf(groupId));
+
+        Map<String, String> headers = buildHeaders("GET", path, params, null, token);
+
+        HttpUrl url = HttpUrl.parse(BASE_URL + path).newBuilder()
+                .addQueryParameter("group_no", String.valueOf(groupId))
+                .build();
+
+        Request request = new Request.Builder()
+                .url(url)
+                .headers(Headers.of(headers))
+                .get()
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            logger.info("getUserInfo: {}", response.code());
+
+            if (!response.isSuccessful()) {
+                throw new IOException("Unexpected code " + response);
+            }
+
+            String body = response.body() != null ? response.body().string() : "{}";
+            System.out.println(body);
+            return null;
+        }
+    }
+
     public static void main(String[] args) throws IOException {
         UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
-        List<UUUGroupDTO> groups = uuutalkApiClient.getGroups("793a968bbcba415ebb2daadf0edc5abf");
-        System.out.println(groups);
+//        List<UUUGroupDTO> groups = uuutalkApiClient.getGroups("793a968bbcba415ebb2daadf0edc5abf");
+//        System.out.println(groups);
+        List<UUUGroupMemberDTO> userInfo = uuutalkApiClient.getUserInfo("", "04a24819bce74ad894a416c0177bd67e", "64a340372fbb403fbce8886e0af63b2d");
     }
 }

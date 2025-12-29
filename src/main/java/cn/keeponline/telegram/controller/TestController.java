@@ -6,7 +6,6 @@ import cn.keeponline.telegram.entity.UserTask;
 import cn.keeponline.telegram.mapper.UserTaskMapper;
 import cn.keeponline.telegram.service.impl.TaskServiceImpl;
 import cn.keeponline.telegram.talktools.services.UuutalkApiClient;
-import cn.keeponline.telegram.talktools.ws.UUTalkWsCore;
 import cn.keeponline.telegram.talktools.ws.WebSocketWrapper;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.WebSocket;
@@ -17,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -80,7 +78,7 @@ public class TestController {
         }
 
         UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
-        List<UUUGroupMemberDTO> uuuGroupMemberDTOS = new ArrayList<>();
+        List<UUUGroupMemberDTO> uuuGroupMemberDTOS;
         try {
             uuuGroupMemberDTOS = uuutalkApiClient.syncGroupMembers(groupId, token, 0, 100);
         } catch (IOException e) {
@@ -91,35 +89,37 @@ public class TestController {
             return "拉取群成员为空";
         }
 
-        for (UUUGroupMemberDTO uuuGroupMemberDTO : uuuGroupMemberDTOS) {
-            try {
-                String to_uid = uuuGroupMemberDTO.getUid();
-                Integer role = uuuGroupMemberDTO.getRole();
-                if (to_uid.equals(uid) || role == 1) {
-                    continue;
-                }
-
-                Map<String, String> stranger = uuutalkApiClient.createStranger(to_uid, token);
-                log.info("strange: {}", stranger);
-                log.info("发送图片: {}", JSONUtil.toJsonStr(uuuGroupMemberDTO));
-                UUTalkWsCore.sendPictureMessage(webSocketWrapper,
-                        "file/preview/chat/1/06e1321af60a42bf8ec6b15facfaaf3d/1a3ba617f3384eb8374255a27ecdb7b7.jpg",
-                        to_uid,
-                        1,
-                        uid);
-            } catch (Exception e) {
-                log.error("", e);
-            }
-            Thread.sleep(50000L);
-        }
+//        for (UUUGroupMemberDTO uuuGroupMemberDTO : uuuGroupMemberDTOS) {
+//            try {
+//                String to_uid = uuuGroupMemberDTO.getUid();
+//                Integer role = uuuGroupMemberDTO.getRole();
+//                if (to_uid.equals(uid) || role == 1) {
+//                    continue;
+//                }
+//
+//                Map<String, String> stranger = uuutalkApiClient.createStranger(to_uid, token);
+//                log.info("strange: {}", stranger);
+//                log.info("发送图片: {}", JSONUtil.toJsonStr(uuuGroupMemberDTO));
+//                UUTalkWsCore.sendPictureMessage(webSocketWrapper,
+//                        "file/preview/chat/1/06e1321af60a42bf8ec6b15facfaaf3d/1a3ba617f3384eb8374255a27ecdb7b7.jpg",
+//                        to_uid,
+//                        1,
+//                        uid);
+//            } catch (Exception e) {
+//                log.error("", e);
+//            }
+//            Thread.sleep(50000L);
+//        }
         return "发送成功";
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+        // 06e1321af60a42bf8ec6b15facfaaf3d
         UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
-        String sign = uuutalkApiClient.sign("{\"to_uid\":\"ee88122e142540c7914749ce74e8b78f\"}", "1766663815064", "03f73736-1492-4adf-8c4a-dc5578e72429", "04a24819bce74ad894a416c0177bd67e");
-        System.out.println(sign);
+        String groupId = "06e1321af60a42bf8ec6b15facfaaf3d";
+        String token = "04a24819bce74ad894a416c0177bd67e";
+        List<UUUGroupMemberDTO> uuuGroupMemberDTOS = uuutalkApiClient.syncGroupMembers(groupId, token, 0, 100);
+        log.info(JSONUtil.toJsonStr(uuuGroupMemberDTOS));
+
     }
-
-
 }
