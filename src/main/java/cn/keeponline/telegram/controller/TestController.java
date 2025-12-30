@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-import static cn.keeponline.telegram.service.impl.TaskServiceImpl.smetaMap;
 
 @RestController
 @Slf4j
@@ -54,18 +53,6 @@ public class TestController {
                 """;
     }
 
-    @RequestMapping("/getWS")
-    public void getWS() {
-        Map<String, WebSocket> webSocketMap = TaskServiceImpl.WebSocketMap;
-        log.info("socket数量: {}", webSocketMap.size());
-        log.info("socket信息: {}", webSocketMap);
-    }
-
-    @RequestMapping("/getSmata")
-    public void getSmata() {
-        log.info("smata数量: {}", smetaMap.size());
-        log.info("smeta信息: {}", smetaMap);
-    }
 
     @RequestMapping("/sendImageToGroupUser")
     public String sendImageToGroupUser(@RequestParam(value = "token", defaultValue = "04a24819bce74ad894a416c0177bd67e") String token,
