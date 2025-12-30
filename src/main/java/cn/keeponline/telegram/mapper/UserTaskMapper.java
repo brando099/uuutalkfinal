@@ -22,4 +22,6 @@ public interface UserTaskMapper extends BaseMapper<UserTask> {
     int updateFrequency(Integer sendInterval, List<String> uids, Integer cvsType);
 
     UserTask getByAccountIdAndUidAndCvsType(String accountId, String uid, Integer cvsType);
+
+    int updateStatus(String uid);
 }

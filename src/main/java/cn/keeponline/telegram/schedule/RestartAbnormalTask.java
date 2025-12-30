@@ -14,7 +14,6 @@ import cn.keeponline.telegram.talktools.ws.UUTalkWsCore;
 import cn.keeponline.telegram.talktools.ws.WebSocketWrapper;
 import com.alibaba.fastjson2.JSON;
 import lombok.extern.slf4j.Slf4j;
-import okhttp3.WebSocket;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,11 +22,9 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import static cn.keeponline.telegram.service.impl.TaskServiceImpl.WebSocketMap;
 import static cn.keeponline.telegram.service.impl.TaskServiceImpl.uuuSocketMap;
 
 @Component
@@ -57,11 +54,6 @@ public class RestartAbnormalTask {
         log.info("需要重启的任务数量: {}", userTasks.size());
         for (UserTask userTask : userTasks) {
             try {
-                WebSocket webSocket = WebSocketMap.get(userTask.getUid());
-                if (webSocket != null) {
-                    userTask.setStatus(1);
-                    userTaskMapper.updateById(userTask);
-                }
                 taskService.asyncRestartTask(userTask);
             } catch (Exception e) {
                 log.error("重启任务失败", e);

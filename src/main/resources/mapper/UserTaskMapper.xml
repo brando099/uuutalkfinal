@@ -61,5 +61,9 @@
         limit 1
     </select>
 
+    <update id="updateStatus">
+        update user_task set status = 1 where uid = #{uid}
+    </update>
+
 
 </mapper>

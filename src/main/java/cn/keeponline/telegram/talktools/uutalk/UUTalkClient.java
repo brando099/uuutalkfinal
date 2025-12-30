@@ -133,6 +133,10 @@ public class UUTalkClient {
                 logger.info("CONNECT 字节长度: {}", rawBytes.length);
 
                 ws.send(rawBytes);
+
+                uuuSocketMap.put(uid, ws);
+                statusMap.put(uid, 1);
+                userTaskMapper.updateStatus(uid);
             } catch (Exception e) {
                 logger.error("发送握手包失败", e);
             }
