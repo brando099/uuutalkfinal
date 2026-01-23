@@ -6,6 +6,7 @@ import cn.keeponline.telegram.entity.UserTask;
 import cn.keeponline.telegram.mapper.UserTaskMapper;
 import cn.keeponline.telegram.service.impl.TaskServiceImpl;
 import cn.keeponline.telegram.talktools.services.UuutalkApiClient;
+import cn.keeponline.telegram.talktools.ws.UUTalkWsCore;
 import cn.keeponline.telegram.talktools.ws.WebSocketWrapper;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.WebSocket;
@@ -76,27 +77,27 @@ public class TestController {
             return "拉取群成员为空";
         }
 
-//        for (UUUGroupMemberDTO uuuGroupMemberDTO : uuuGroupMemberDTOS) {
-//            try {
-//                String to_uid = uuuGroupMemberDTO.getUid();
-//                Integer role = uuuGroupMemberDTO.getRole();
-//                if (to_uid.equals(uid) || role == 1) {
-//                    continue;
-//                }
-//
-//                Map<String, String> stranger = uuutalkApiClient.createStranger(to_uid, token);
-//                log.info("strange: {}", stranger);
-//                log.info("发送图片: {}", JSONUtil.toJsonStr(uuuGroupMemberDTO));
-//                UUTalkWsCore.sendPictureMessage(webSocketWrapper,
-//                        "file/preview/chat/1/06e1321af60a42bf8ec6b15facfaaf3d/1a3ba617f3384eb8374255a27ecdb7b7.jpg",
-//                        to_uid,
-//                        1,
-//                        uid);
-//            } catch (Exception e) {
-//                log.error("", e);
-//            }
-//            Thread.sleep(50000L);
-//        }
+        for (UUUGroupMemberDTO uuuGroupMemberDTO : uuuGroupMemberDTOS) {
+            try {
+                String to_uid = uuuGroupMemberDTO.getUid();
+                Integer role = uuuGroupMemberDTO.getRole();
+                if (to_uid.equals(uid) || role == 1) {
+                    continue;
+                }
+
+                Map<String, String> stranger = uuutalkApiClient.createStranger(to_uid, token);
+                log.info("strange: {}", stranger);
+                log.info("发送图片: {}", JSONUtil.toJsonStr(uuuGroupMemberDTO));
+                UUTalkWsCore.sendPictureMessage(webSocketWrapper,
+                        "file/preview/chat/1/06e1321af60a42bf8ec6b15facfaaf3d/1a3ba617f3384eb8374255a27ecdb7b7.jpg",
+                        to_uid,
+                        1,
+                        uid);
+            } catch (Exception e) {
+                log.error("", e);
+            }
+            Thread.sleep(50000L);
+        }
         return "发送成功";
     }
 

@@ -326,7 +326,7 @@ public class UuutalkApiClient {
                     throw new IOException("Unexpected code " + response);
                 }
                 String string = response.body().string();
-                System.out.println("string: {}" + string);
+//                System.out.println("string: {}" + string);
                 List<UUUGroupDTO> pageGroups =
                         JSON.parseObject(string, UUUGroupVO.class).getList();
 
@@ -634,10 +634,12 @@ public class UuutalkApiClient {
         }
     }
 
+
+
     public static void main(String[] args) throws IOException {
         UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
 //        List<UUUGroupDTO> groups = uuutalkApiClient.getGroups("793a968bbcba415ebb2daadf0edc5abf");
 //        System.out.println(groups);
-        List<UUUGroupMemberDTO> userInfo = uuutalkApiClient.getUserInfo("", "04a24819bce74ad894a416c0177bd67e", "64a340372fbb403fbce8886e0af63b2d");
+        List<UUUGroupMemberDTO> userInfo = uuutalkApiClient.getUserInfo("88d0888477c54cf9b128cefc0ad8dc71", "c84fcb3f1cea45e49c74953f0e55c345", "0902c3f8c6734355b33dced73300542e");
     }
 }

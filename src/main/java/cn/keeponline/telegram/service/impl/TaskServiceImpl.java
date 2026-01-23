@@ -23,7 +23,9 @@ import com.alibaba.fastjson2.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
@@ -74,6 +76,10 @@ public class TaskServiceImpl implements TaskService {
 
     @Autowired
     private UUTalkClient uuTalkClient;
+
+    @Qualifier("redisTemplate1")
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate1;
 
     @Override
     @Async("asyncTaskExecutor")
@@ -230,13 +236,20 @@ public class TaskServiceImpl implements TaskService {
             return;
         }
 
-        int index = sendIndexMap.getOrDefault(uid, 0);
+//        int index = sendIndexMap.getOrDefault(uid, 0);
+        Object indexInRedis = redisTemplate1.opsForValue().get("index:" + uid);
+        if (indexInRedis == null) {
+            indexInRedis = "0";
+        }
+        int index = Integer.parseInt(indexInRedis.toString());
         if (index >= list.size()) {
             index = 0;
         }
 
         SendGeneralDTO dto = list.get(index);
-        sendIndexMap.put(uid, index + 1);
+        // 存redis里面去吧，从redis中拿
+//        sendIndexMap.put(uid, index + 1);
+        redisTemplate1.opsForValue().set("index:" + uid, String.valueOf(index + 1));
 
         String gid = dto.getId();
         String name = dto.getName();
@@ -257,14 +270,14 @@ public class TaskServiceImpl implements TaskService {
         if (!send) {
             sendRecord.setStatus(0);
             sendRecord.setReason("发送失败");
-            asyncComponent.insert(sendRecord);
+            asyncComponent.insertSendRecord(sendRecord);
             userTask.setStatus(0);
             userTaskMapper.updateById(userTask);
             stopSchedule(uid);
             statusMap.put(uid, 0);
         } else {
             sendRecord.setStatus(1);
-            asyncComponent.insert(sendRecord);
+            asyncComponent.insertSendRecord(sendRecord);
         }
     }
 

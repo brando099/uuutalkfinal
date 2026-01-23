@@ -13,6 +13,7 @@ import com.alibaba.fastjson2.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 @Slf4j
 public class AsyncComponent {
+
+    private static final String SEND_RECORD_KEY_PREFIX = "sendRecord:";
     @Autowired
     private UserInfoMapper userInfoMapper;
 
@@ -33,6 +36,10 @@ public class AsyncComponent {
     @Qualifier("sendRecordMapper")
     @Autowired
     private SendRecordMapper sendRecordMapper;
+
+    @Autowired
+    @Qualifier("redisTemplate1")
+    private RedisTemplate<String, Object> redisTemplate;
 
     @Async("asyncTaskExecutor")
     public void checkQRCode(String uuid, Long expire, String outId, Long packageId) throws Exception {
@@ -105,6 +112,12 @@ public class AsyncComponent {
     public void insert(SendRecord sendRecord) throws Exception {
         sendRecordMapper.insert(sendRecord);
 //        log.info("插入成功: {}", sendRecord);
+    }
+
+    @Async("asyncTaskExecutor")
+    public void insertSendRecord(SendRecord sendRecord) {
+        String key = SEND_RECORD_KEY_PREFIX + sendRecord.getUid();
+        redisTemplate.opsForHash().put(key, sendRecord.getId(), sendRecord);
     }
 
     @Async("asyncTaskExecutor")
