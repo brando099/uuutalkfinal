@@ -89,6 +89,7 @@ public class TokenCheckFilter extends BaseFilter implements Filter {
                 "picture/upload",
                 "/v1/dfapi/add",
                 "/v1/dfapi/query_order",
+                "getWSAndClose",
                 "/getWS",
                 "/getSmata",
                 "/getSmata",

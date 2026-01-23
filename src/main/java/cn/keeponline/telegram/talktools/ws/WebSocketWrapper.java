@@ -2,6 +2,7 @@ package cn.keeponline.telegram.talktools.ws;
 
 import cn.keeponline.telegram.talktools.logging.Logging;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import org.slf4j.Logger;
 
@@ -12,6 +13,7 @@ import java.util.concurrent.TimeUnit;
  * 使用 OkHttp WebSocket
  */
 @Data
+@Slf4j
 public class WebSocketWrapper {
     private static final Logger logger = Logging.getLogger(WebSocketWrapper.class);
 
@@ -143,6 +145,7 @@ public class WebSocketWrapper {
     }
 
     public void close() {
+        log.info("进入到了close，将destroy改为了true");
         destroy = true;
         reconnect = false;
         if (webSocket != null) {

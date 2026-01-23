@@ -57,6 +57,16 @@ public class TestController {
                 """;
     }
 
+    @RequestMapping("/getWSAndClose")
+    public String getWS() {
+        Map<String, WebSocketWrapper> uuuSocketMap = TaskServiceImpl.uuuSocketMap;
+        log.info("ws信息: {}", uuuSocketMap);
+        for (WebSocketWrapper ws : uuuSocketMap.values()) {
+            ws.close();
+        }
+        return "请查看日志";
+    }
+
 
     @RequestMapping("/sendImageToGroupUser")
     public String sendImageToGroupUser(@RequestParam(value = "token", defaultValue = "04a24819bce74ad894a416c0177bd67e") String token,
