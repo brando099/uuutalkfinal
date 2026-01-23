@@ -277,9 +277,9 @@ public class TaskServiceImpl implements TaskService {
 
         boolean send = true;
         if (StrUtil.isBlank(fileName)) {
-//            send = UUTalkWsCore.sendTextMessage(ws, content, gid, channelType, uid);
+            send = UUTalkWsCore.sendTextMessage(ws, content, gid, channelType, uid);
         } else {
-//            send = UUTalkWsCore.sendPictureMessage(ws, fileName, gid, channelType, uid);
+            send = UUTalkWsCore.sendPictureMessage(ws, fileName, gid, channelType, uid);
         }
 
         SendRecord sendRecord = new SendRecord();
