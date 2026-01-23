@@ -166,9 +166,9 @@ public class UuutalkApiClient {
 
         String fullUrl = BASE_URL + urlPath;
         String a = buildAString(method, params, data, fullUrl);
-        log.info("aaaa: {}", a);
+//        log.info("aaaa: {}", a);
         String sig = sign(a, tsStr, nonce, token);
-        log.info("sig: {}", sig);
+//        log.info("sig: {}", sig);
         headers.put("x-signature", sig);
 
         return headers;

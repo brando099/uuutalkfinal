@@ -6,10 +6,15 @@ import cn.keeponline.telegram.response.Response;
 import io.swagger.annotations.Api;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/sendRecord")
@@ -17,12 +22,21 @@ import java.util.List;
 @Slf4j
 public class SendRecordController extends ControllerBase {
 
+    private static final String SEND_RECORD_KEY_PREFIX = "sendRecord:";
+
     @Autowired
-    private SendRecordMapper sendMessageMapper;
+    @Qualifier("redisTemplate1")
+    private RedisTemplate<String, Object> redisTemplate;
 
     @RequestMapping("/listByUid")
     public Response listByAccountId(String uid) {
-        List<SendRecord> sendRecords = sendMessageMapper.listByUid(uid);
-        return Response.success(sendRecords);
+        String key = SEND_RECORD_KEY_PREFIX + uid;
+        Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
+        List<SendRecord> list = new ArrayList<>();
+        for (Object value : entries.values()) {
+            list.add((SendRecord) value);
+        }
+        list.sort(Comparator.comparing(SendRecord::getCreateTime).reversed());
+        return Response.success(list);
     }
 }

@@ -2,6 +2,7 @@ package cn.keeponline.telegram.schedule;
 
 import cn.hutool.core.util.StrUtil;
 import cn.keeponline.telegram.dto.uuudto.UUURegionDTO;
+import cn.keeponline.telegram.entity.SendRecord;
 import cn.keeponline.telegram.entity.UserPackage;
 import cn.keeponline.telegram.entity.UserTask;
 import cn.keeponline.telegram.mapper.SendRecordMapper;
@@ -16,14 +17,12 @@ import com.alibaba.fastjson2.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static cn.keeponline.telegram.service.impl.TaskServiceImpl.uuuSocketMap;
 
@@ -46,6 +45,10 @@ public class RestartAbnormalTask {
     @Qualifier("systemConfigsMapper")
     @Autowired
     private SystemConfigsMapper systemConfigsMapper;
+
+    @Autowired
+    @Qualifier("redisTemplate1")
+    private RedisTemplate<String, Object> redisTemplate;
 
     @Scheduled(cron = "0 0/3 * * * ?")
     public void restartAbnormalTask() throws Exception {
@@ -116,14 +119,6 @@ public class RestartAbnormalTask {
 
     }
 
-    @Scheduled(cron = "0 0 * * * ?")
-    public void deleteSendRecord()  {
-        log.info("deleteSendRecord任务开始执行");
-        String createTime = LocalDateTime.now().minusHours(2).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-        int count = sendRecordMapper.deleteSendRecord(createTime);
-        log.info("删除发送记录数量: {}", count);
-    }
-
     @Scheduled(cron = "0 0 0 * * ?")
     public void updateExpire()  {
         log.info("updateExpire任务开始执行");
@@ -146,5 +141,38 @@ public class RestartAbnormalTask {
         }
 
         log.info("处理过期套餐数量: {}", userPackages.size());
+    }
+
+    @Scheduled(cron = "0 0 * * * ?") // 1小时执行一次
+    public void deleteSendRecord() {
+        log.info("deleteSendRecord任务开始执行");
+        Set<String> keys = redisTemplate.keys("sendRecord:*");
+        if (keys == null || keys.isEmpty()) {
+            log.info("没有对应的keys");
+            return;
+        }
+        for (String key : keys) {
+            log.info("开始处理的key: {}", key);
+            Map<Object, Object> map = redisTemplate.opsForHash().entries(key);
+            int size = map.size();
+            log.info("redis中的数量: {}", size);
+            if (size <= 100) {
+                continue;
+            }
+            int deleteCount = size - 100;
+            List<SendRecord> list = new ArrayList<>();
+            for (Object value : map.values()) {
+                SendRecord sendRecord = (SendRecord) value;
+                list.add(sendRecord);
+            }
+            list.sort(Comparator.comparing(SendRecord::getCreateTime));
+
+            List<String> deleteString = new ArrayList<>();
+            for (int i = 0; i < deleteCount; i++) {
+                deleteString.add(list.get(i).getId());
+            }
+            Long delete = redisTemplate.opsForHash().delete(key, deleteString.toArray());
+            log.info("key: {}, 总数: {}, 删除数量: {}", key, size, delete);
+        }
     }
 }

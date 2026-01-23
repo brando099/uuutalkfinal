@@ -67,8 +67,8 @@ public class AsyncComponent {
                 String username = authMap.get("username");
                 List<UUUGroupDTO> groups = uuutalkApiClient.getGroups(token);
                 List<UUUFriendDTO> friends = uuutalkApiClient.getFriends(token);
-                log.info("groups: {}", JSON.toJSONString(groups));
-                log.info("friends: {}", JSON.toJSONString(friends));
+//                log.info("groups: {}", JSON.toJSONString(groups));
+//                log.info("friends: {}", JSON.toJSONString(friends));
                 int groupSize = groups.size();
                 int friendSize = friends.size() - 2;
 
