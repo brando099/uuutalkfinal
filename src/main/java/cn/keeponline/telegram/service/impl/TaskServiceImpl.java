@@ -322,6 +322,10 @@ public class TaskServiceImpl implements TaskService {
         }
         userTaskMapper.deleteById(userTask.getId());
         statusMap.remove(uid);
+        // 如果cvs_type == 1，还需要把redis中的发送索引重置
+        if (cvsType == 1) {
+            redisTemplate1.delete("index:" + uid);
+        }
         WebSocketWrapper ws = uuuSocketMap.remove(uid);
         if (ws != null) {
             ws.close();
@@ -339,6 +343,9 @@ public class TaskServiceImpl implements TaskService {
                 userTaskMapper.deleteById(userTask.getId());
                 log.info("删除成功: {}", uid);
                 statusMap.remove(uid);
+                if (userTask.getCvsType() == 1) {
+                    redisTemplate1.delete("index:" + uid);
+                }
                 WebSocketWrapper ws = uuuSocketMap.remove(uid);
                 if (ws != null) {
                     ws.close();
