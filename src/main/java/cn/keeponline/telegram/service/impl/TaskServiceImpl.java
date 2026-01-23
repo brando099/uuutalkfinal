@@ -244,6 +244,12 @@ public class TaskServiceImpl implements TaskService {
         int index = Integer.parseInt(indexInRedis.toString());
         if (index >= list.size()) {
             index = 0;
+            if (userTask.getCvsType() == 1) {
+                statusMap.remove(uid);
+                userTaskMapper.deleteById(userTask.getId());
+                redisTemplate1.opsForValue().set("index:" + uid, "0");
+                return;
+            }
         }
 
         SendGeneralDTO dto = list.get(index);
