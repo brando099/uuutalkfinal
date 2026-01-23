@@ -50,6 +50,9 @@ public class RestartAbnormalTask {
     @Qualifier("redisTemplate1")
     private RedisTemplate<String, Object> redisTemplate;
 
+    @Autowired
+    private UuutalkApiClient uuutalkApiClient;
+
     @Scheduled(cron = "0 0/3 * * * ?")
     public void restartAbnormalTask() throws Exception {
         log.info("重启异常的任务开始执行");
@@ -80,7 +83,6 @@ public class RestartAbnormalTask {
     @Scheduled(cron = "0 0/15 * * * ?")
     public void updateApiAddr() throws IOException {
         log.info("updateApiAddr任务开始执行");
-        UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
 
         Map<String, String> ping = uuutalkApiClient.ping();
         if (ping != null) {
@@ -105,7 +107,6 @@ public class RestartAbnormalTask {
             String addr = region.getAddr().replace(":443", "") + "/v1";
             UuutalkApiClient.BASE_URL = addr;
 
-            UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
             Map<String, String> ping = uuutalkApiClient.ping();
             if (ping != null) {
                 log.info("地址可以访问，更新跳出: {}", addr);

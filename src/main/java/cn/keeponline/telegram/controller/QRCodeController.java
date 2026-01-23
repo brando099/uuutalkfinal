@@ -36,6 +36,9 @@ public class QRCodeController extends ControllerBase{
     @Autowired
     private UserPackageMapper userPackageMapper;
 
+    @Autowired
+    private UuutalkApiClient uuutalkApiClient;
+
     @RequestMapping("/getQRCode")
     public Response getQRCode(@RequestParam Long packageId) throws Exception {
         log.info("获取二维码入参: {}", packageId);
@@ -45,8 +48,6 @@ public class QRCodeController extends ControllerBase{
         if (userPackage == null) {
             throw new BizzRuntimeException("套餐不存在或已被使用");
         }
-
-        UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
         Map<String, String> map = uuutalkApiClient.getLoginUuid();
 //        String qrcode = SendMessage.getQrcode();
 //        YResponse<QRDTO> qrDTO = JSON.parseObject(qrcode, new TypeReference<>() {

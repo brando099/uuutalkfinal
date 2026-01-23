@@ -27,6 +27,9 @@ public class TestController {
     @Autowired
     private UserTaskMapper userTaskMapper;
 
+    @Autowired
+    private UuutalkApiClient uuutalkApiClient;
+
     @RequestMapping("/test")
     public String test(String messageContent) {
         for (int i = 0; i < 1000; i++) {
@@ -65,7 +68,6 @@ public class TestController {
             return "ws 未连接";
         }
 
-        UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
         List<UUUGroupMemberDTO> uuuGroupMemberDTOS;
         try {
             uuuGroupMemberDTOS = uuutalkApiClient.syncGroupMembers(groupId, token, 0, 100);
@@ -103,11 +105,11 @@ public class TestController {
 
     public static void main(String[] args) throws IOException {
         // 06e1321af60a42bf8ec6b15facfaaf3d
-        UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
+
         String groupId = "06e1321af60a42bf8ec6b15facfaaf3d";
         String token = "04a24819bce74ad894a416c0177bd67e";
-        List<UUUGroupMemberDTO> uuuGroupMemberDTOS = uuutalkApiClient.syncGroupMembers(groupId, token, 0, 100);
-        log.info(JSONUtil.toJsonStr(uuuGroupMemberDTOS));
+//        List<UUUGroupMemberDTO> uuuGroupMemberDTOS = uuutalkApiClient.syncGroupMembers(groupId, token, 0, 100);
+//        log.info(JSONUtil.toJsonStr(uuuGroupMemberDTOS));
 
     }
 }

@@ -77,6 +77,9 @@ public class TaskServiceImpl implements TaskService {
     @Autowired
     private UUTalkClient uuTalkClient;
 
+    @Autowired
+    private UuutalkApiClient uuutalkApiClient;
+
     @Qualifier("redisTemplate1")
     @Autowired
     private RedisTemplate<String, Object> redisTemplate1;
@@ -157,7 +160,6 @@ public class TaskServiceImpl implements TaskService {
         // 等待一下，让ws把状态修改过来
         Thread.sleep(1500);
         List<SendGeneralDTO> list = new ArrayList<>();
-        UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
         if (cvsType == 2) {
             List<UUUGroupDTO> groupsList = uuutalkApiClient.getGroups(token);
             for (UUUGroupDTO uuuGroupDTO : groupsList) {
@@ -229,6 +231,7 @@ public class TaskServiceImpl implements TaskService {
         String uid = userTask.getUid();
         String content = userTask.getMessageContent();
         String fileName = userTask.getFileName();
+        Integer cvsType = userTask.getCvsType();
         Integer status = statusMap.get(uid);
         if (status == null || status == 0) {
             log.info("任务状态异常，停止执行，uid: {}", uid);
@@ -236,26 +239,36 @@ public class TaskServiceImpl implements TaskService {
             return;
         }
 
-//        int index = sendIndexMap.getOrDefault(uid, 0);
-        Object indexInRedis = redisTemplate1.opsForValue().get("index:" + uid);
-        if (indexInRedis == null) {
-            indexInRedis = "0";
+        int index = sendIndexMap.getOrDefault(uid, 0);
+        if (cvsType == 1) {
+            Object indexInRedis = redisTemplate1.opsForValue().get("index:" + uid);
+            if (indexInRedis == null) {
+                indexInRedis = "0";
+            }
+            index = Integer.parseInt(indexInRedis.toString());
         }
-        int index = Integer.parseInt(indexInRedis.toString());
+
         if (index >= list.size()) {
             index = 0;
-            if (userTask.getCvsType() == 1) {
+            if (cvsType == 1) {
                 statusMap.remove(uid);
                 userTaskMapper.deleteById(userTask.getId());
                 redisTemplate1.opsForValue().set("index:" + uid, "0");
+                statusMap.remove(uid);
+                WebSocketWrapper ws2 = uuuSocketMap.remove(uid);
+                if (ws2 != null) {
+                    ws2.close();
+                }
                 return;
             }
         }
 
         SendGeneralDTO dto = list.get(index);
         // 存redis里面去吧，从redis中拿
-//        sendIndexMap.put(uid, index + 1);
-        redisTemplate1.opsForValue().set("index:" + uid, String.valueOf(index + 1));
+        sendIndexMap.put(uid, index + 1);
+        if (cvsType == 1) {
+            redisTemplate1.opsForValue().set("index:" + uid, String.valueOf(index + 1));
+        }
 
         String gid = dto.getId();
         String name = dto.getName();

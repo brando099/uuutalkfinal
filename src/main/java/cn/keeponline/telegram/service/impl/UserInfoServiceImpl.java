@@ -39,7 +39,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     public List<UserInfo> listByAccountId(String accountId) throws Exception {
         List<UserInfo> userInfos = userInfoMapper.listByAccountId(accountId);
         if (!userInfos.isEmpty()) {
-            asyncComponent.syncCountInfo(userInfos);
+//            asyncComponent.syncCountInfo(userInfos);
         }
         for (UserInfo userInfo : userInfos) {
             String taskStatus = "未配置";

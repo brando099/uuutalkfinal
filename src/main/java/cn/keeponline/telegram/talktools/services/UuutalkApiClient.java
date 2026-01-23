@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import org.slf4j.Logger;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -29,6 +30,7 @@ import java.util.concurrent.TimeUnit;
  * 注意：WASM 签名功能需要额外实现（可通过 JNI 或 GraalVM）
  */
 @Slf4j
+@Component
 public class UuutalkApiClient {
     private static final Logger logger = Logging.getLogger(UuutalkApiClient.class);
     public static String BASE_URL = "https://api.uutalk.co/v1";
@@ -637,9 +639,9 @@ public class UuutalkApiClient {
 
 
     public static void main(String[] args) throws IOException {
-        UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
+
 //        List<UUUGroupDTO> groups = uuutalkApiClient.getGroups("793a968bbcba415ebb2daadf0edc5abf");
 //        System.out.println(groups);
-        List<UUUGroupMemberDTO> userInfo = uuutalkApiClient.getUserInfo("88d0888477c54cf9b128cefc0ad8dc71", "c84fcb3f1cea45e49c74953f0e55c345", "0902c3f8c6734355b33dced73300542e");
+//        List<UUUGroupMemberDTO> userInfo = uuutalkApiClient.getUserInfo("88d0888477c54cf9b128cefc0ad8dc71", "c84fcb3f1cea45e49c74953f0e55c345", "0902c3f8c6734355b33dced73300542e");
     }
 }

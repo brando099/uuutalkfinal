@@ -41,6 +41,9 @@ public class AsyncComponent {
     @Qualifier("redisTemplate1")
     private RedisTemplate<String, Object> redisTemplate;
 
+    @Autowired
+    private UuutalkApiClient uuutalkApiClient;
+
     @Async("asyncTaskExecutor")
     public void checkQRCode(String uuid, Long expire, String outId, Long packageId) throws Exception {
         while (true) {
@@ -49,7 +52,6 @@ public class AsyncComponent {
                 log.info("长时间未扫码，退出");
                 break;
             }
-            UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
             Map<String, String> map = uuutalkApiClient.getLoginStatus(uuid);
             String status = map.get("status");
             log.info("status: {}", status);
@@ -135,7 +137,6 @@ public class AsyncComponent {
     }
 
     private void extracted(List<UserInfo> users) throws Exception {
-        UuutalkApiClient uuutalkApiClient = new UuutalkApiClient();
         for (UserInfo user : users) {
             if (user.getStatus() == 0) {
                 continue;

@@ -81,6 +81,7 @@ public class UUTalkClient {
     public WebSocketWrapper runWsClient(String uid, String token) {
         WebSocketWrapper webSocketWrapper = uuuSocketMap.get(uid);
         if (webSocketWrapper != null) {
+            log.info("ws已经存在了，直接返回");
             return webSocketWrapper;
         }
         logger.info("run_ws_client 启动, uid={}, token={}", uid, token);

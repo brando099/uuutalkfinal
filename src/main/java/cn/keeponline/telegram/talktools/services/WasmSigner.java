@@ -300,8 +300,8 @@ public class WasmSigner {
             // 读取结果字符串
             String signature = wasmReadStr(outPtr, outLen);
             
-            logger.debug("sign inputs: a={}, timestamp={}, nonce={}, token={}, signature={}",
-                    a, timestamp, nonce, token, signature);
+//            logger.debug("sign inputs: a={}, timestamp={}, nonce={}, token={}, signature={}",
+//                    a, timestamp, nonce, token, signature);
             
             return signature;
         } catch (Exception e) {
