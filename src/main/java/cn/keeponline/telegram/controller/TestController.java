@@ -9,7 +9,6 @@ import cn.keeponline.telegram.talktools.services.UuutalkApiClient;
 import cn.keeponline.telegram.talktools.ws.UUTalkWsCore;
 import cn.keeponline.telegram.talktools.ws.WebSocketWrapper;
 import lombok.extern.slf4j.Slf4j;
-import okhttp3.WebSocket;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.RequestMapping;

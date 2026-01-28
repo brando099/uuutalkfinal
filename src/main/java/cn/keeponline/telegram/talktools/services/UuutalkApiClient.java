@@ -4,7 +4,9 @@ import cn.keeponline.telegram.dto.uuudto.UUUFriendDTO;
 import cn.keeponline.telegram.dto.uuudto.UUUGroupDTO;
 import cn.keeponline.telegram.dto.uuudto.UUUGroupVO;
 import cn.keeponline.telegram.dto.uuudto.*;
+import cn.keeponline.telegram.dto.uuuvo.SearchVO;
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import cn.keeponline.telegram.talktools.logging.Logging;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -374,7 +376,31 @@ public class UuutalkApiClient {
             }
             String string = response.body().string();
             return JSON.parseArray(string, UUUFriendDTO.class);
-//            return objectMapper.readValue(response.body().string(), List.class);
+        }
+    }
+
+    public SearchVO userSearch(String token, String keyword) throws IOException {
+        String path = "/user/search";
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("keyword", keyword);
+        Map<String, String> headers = buildHeaders("GET", path, params, null, token);
+
+        HttpUrl url = HttpUrl.parse(BASE_URL + path).newBuilder()
+                .addQueryParameter("keyword", keyword)
+                .build();
+
+        Request request = new Request.Builder()
+                .url(url)
+                .headers(Headers.of(headers))
+                .get()
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                return null;
+            }
+            String string = response.body().string();
+            return JSON.parseObject(string, SearchVO.class);
         }
     }
 
@@ -421,6 +447,33 @@ public class UuutalkApiClient {
                 throw new IOException("Unexpected code " + response);
             }
             return objectMapper.readValue(response.body().string(), Map.class);
+        }
+    }
+
+    /**
+     * 申请添加好友
+     */
+    public JSONObject friendApply(String to_uid, String vercode, String token, String remark) throws IOException {
+        // 1. 构造 JSON body
+        ObjectNode body = objectMapper.createObjectNode();
+        body.put("to_uid", to_uid);
+        body.put("vercode", vercode);
+        body.put("remark", remark);
+        String jsonBody = body.toString();
+        String path = "/friend/apply";
+        Map<String, String> headers = buildHeaders("POST", path, null, jsonBody, token);
+        Request request = new Request.Builder()
+                .url(BASE_URL + path)
+                .headers(Headers.of(headers))
+                .post(RequestBody.create(jsonBody, MediaType.get("application/json")))
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                log.info("状态码异常, 状态码: {}, 返回结果: {}", response.code(), response.body().string());
+                throw new IOException("Unexpected code " + response);
+            }
+            return JSON.parseObject(response.body().string());
         }
     }
 
@@ -599,7 +652,7 @@ public class UuutalkApiClient {
         }
     }
 
-    public List<UUUGroupMemberDTO> getUserInfo(
+    public UUUGroupMemberDTO getUserInfo(
             String groupId,
             String token,
             String uid
@@ -624,15 +677,12 @@ public class UuutalkApiClient {
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
-            logger.info("getUserInfo: {}", response.code());
-
             if (!response.isSuccessful()) {
                 throw new IOException("Unexpected code " + response);
             }
 
             String body = response.body() != null ? response.body().string() : "{}";
-            System.out.println(body);
-            return null;
+            return JSON.parseObject(body, UUUGroupMemberDTO.class);
         }
     }
 

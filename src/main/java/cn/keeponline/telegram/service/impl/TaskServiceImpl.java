@@ -1,16 +1,21 @@
 package cn.keeponline.telegram.service.impl;
 
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import cn.keeponline.telegram.component.AsyncComponent;
 import cn.keeponline.telegram.context.SysUserContext;
 import cn.keeponline.telegram.dto.*;
+import cn.keeponline.telegram.dto.uuudto.SearchDTO;
 import cn.keeponline.telegram.dto.uuudto.UUUFriendDTO;
 import cn.keeponline.telegram.dto.uuudto.UUUGroupDTO;
+import cn.keeponline.telegram.dto.uuudto.UUUGroupMemberDTO;
+import cn.keeponline.telegram.dto.uuuvo.SearchVO;
 import cn.keeponline.telegram.entity.SendRecord;
 import cn.keeponline.telegram.entity.UserInfo;
 import cn.keeponline.telegram.entity.UserTask;
 import cn.keeponline.telegram.exception.BizzRuntimeException;
 import cn.keeponline.telegram.input.*;
+import cn.keeponline.telegram.mapper.SystemConfigsMapper;
 import cn.keeponline.telegram.mapper.UserInfoMapper;
 import cn.keeponline.telegram.mapper.UserTaskMapper;
 import cn.keeponline.telegram.service.TaskService;
@@ -20,6 +25,7 @@ import cn.keeponline.telegram.talktools.uutalk.UUTalkClient;
 import cn.keeponline.telegram.talktools.ws.UUTalkWsCore;
 import cn.keeponline.telegram.talktools.ws.WebSocketWrapper;
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,10 +35,12 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
@@ -83,6 +91,10 @@ public class TaskServiceImpl implements TaskService {
     @Qualifier("redisTemplate1")
     @Autowired
     private RedisTemplate<String, Object> redisTemplate1;
+
+    @Qualifier("systemConfigsMapper")
+    @Autowired
+    private SystemConfigsMapper systemConfigsMapper;
 
     @Override
     @Async("asyncTaskExecutor")
@@ -367,8 +379,58 @@ public class TaskServiceImpl implements TaskService {
         log.info("修改频率数量: {}", updateCount);
     }
 
+    @Override
+    public List<UUUGroupDTO> getGroups(String token) throws IOException {
+        return uuutalkApiClient.getGroups(token);
+    }
 
+    @Override
+    public void addFriends(String groupId, String remark, String uid) throws InterruptedException {
+        UserInfo userInfo = userInfoMapper.getByUid(uid);
+        String token = userInfo.getToken();
+        List<UUUGroupMemberDTO> uuuGroupMemberDTOS;
+        try {
+            uuuGroupMemberDTOS = uuutalkApiClient.syncGroupMembers(groupId, token, 0, 10000);
+        } catch (IOException e) {
+            log.error("", e);
+            throw new BizzRuntimeException("拉取群成员失败");
+        }
+        if (CollectionUtils.isEmpty(uuuGroupMemberDTOS)) {
+            throw new BizzRuntimeException("拉取群成员为空");
+        }
+        log.info("群数量: {}", uuuGroupMemberDTOS.size());
+        int addWait = Integer.parseInt(systemConfigsMapper.getByKey("add_friend_wait").getValue());
+        for (UUUGroupMemberDTO uuuGroupMemberDTO : uuuGroupMemberDTOS) {
+            try {
+                String to_uid = uuuGroupMemberDTO.getUid();
+                if (to_uid.equals(uid)) {
+                    log.info("本人不需要添加, to_uid: {}", to_uid);
+                    continue;
+                }
+                UUUGroupMemberDTO dto = uuutalkApiClient.getUserInfo(groupId, token, to_uid);
+                String shortNo = dto.getShort_no();
+                Integer follow = dto.getFollow();
+                if (follow == 1) {
+                    log.info("已经是好友了: {}", dto.getName());
+                    continue;
+                }
+                SearchVO searchVO = uuutalkApiClient.userSearch(token, shortNo);
 
+                log.info("searchVO: {}", JSONUtil.toJsonStr(searchVO));
+
+                SearchDTO searchDTO = searchVO.getData();
+                String vercode = searchDTO.getVercode();
+                String addUid = searchDTO.getUid();
+
+                JSONObject result = uuutalkApiClient.friendApply(addUid, vercode, token, remark);
+                log.info("添加好友结果: {}", result);
+            } catch (Exception e) {
+                log.error("", e);
+            }
+            Thread.sleep(addWait * 1000L);
+        }
+        log.info("添加好友执行完成, uid: {}", uid);
+    }
     public static void main(String[] args) {
         String smeta = """
 {"header":{"sm":1,"ver":10,"uid":"{uid}","cmdtype":"g.smeta"},"body":{"marks":null}}

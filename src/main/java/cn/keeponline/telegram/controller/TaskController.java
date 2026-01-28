@@ -17,9 +17,12 @@ import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +49,10 @@ public class TaskController extends ControllerBase {
     @Qualifier("userPackageMapper")
     @Autowired
     private UserPackageMapper userPackageMapper;
+
+    @Qualifier("redisTemplate1")
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
 
     @ApiOperation("批量添加任务")
     @PostMapping("/addBatchTask")
@@ -111,6 +118,33 @@ public class TaskController extends ControllerBase {
     @GetMapping("/testRestart")
     public Response testRestart() throws Exception {
         restartAbnormalTask.restartAbnormalTask();
+        return Response.success();
+    }
+
+    @ApiOperation("获取群组信息")
+    @GetMapping("/getGroups")
+    public Response getGroups(String token) throws Exception {
+        return Response.success(taskService.getGroups(token));
+    }
+
+    @ApiOperation("添加好友")
+    @GetMapping("/addFriends")
+    public Response addFriends(String groupId, String remark, String uid) {
+        log.info("groupId: {}, remark: {}, uid: {}", groupId, remark, uid);
+
+        if (!Boolean.TRUE.equals(redisTemplate.opsForValue().setIfAbsent("addFriends:" + uid, LocalDateTime.now().toString(), Duration.ofDays(10)))) {
+            throw new BizzRuntimeException("上次任务还没有执行完成");
+        }
+        try {
+            taskService.addFriends(groupId, remark, uid);
+        } catch (BizzRuntimeException be) {
+            log.error("业务异常", be);
+            throw be;
+        } catch (Exception e) {
+            log.error("系统异常", e);
+        } finally {
+            redisTemplate.delete("addFriends:" + uid);
+        }
         return Response.success();
     }
 }

@@ -18,8 +18,8 @@
         select * from user_info where uid = #{uid}
     </select>
 
-    <select id="getByAccountIdAndUid" resultType="cn.keeponline.telegram.entity.UserInfo">
-        select * from user_info where account_id = #{accountId} and uid = #{uid}
+    <select id="getByAccountId" resultType="cn.keeponline.telegram.entity.UserInfo">
+        select * from user_info where account_id = #{accountId}
     </select>
 
     <select id="getByUuid" resultType="cn.keeponline.telegram.entity.UserInfo">

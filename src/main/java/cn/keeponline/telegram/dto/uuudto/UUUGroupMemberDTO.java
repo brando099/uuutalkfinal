@@ -61,4 +61,9 @@ public class UUUGroupMemberDTO {
 
     @JsonProperty("setting_blacklist")
     private Integer settingBlacklist;
+
+    private String short_no;
+
+    // 是否已经是好友了
+    private Integer follow;
 }

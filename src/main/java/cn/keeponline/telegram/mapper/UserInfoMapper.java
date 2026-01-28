@@ -11,7 +11,7 @@ import java.util.List;
 public interface UserInfoMapper extends BaseMapper<UserInfo> {
     UserInfo getByUid(String uid);
 
-    UserInfo getByAccountIdAndUid(String accountId, String uid);
+    UserInfo getByAccountId(String accountId);
 
     UserInfo getByUuid(String uuid);
 

@@ -52,7 +52,7 @@ public class UserPackageController extends ControllerBase {
 
 
     @RequestMapping("/addPackage")
-    public Response addPackage(@RequestBody AddPackageInput addPackageInput)  {
+    public Response addPackage(AddPackageInput addPackageInput)  {
         String outId = addPackageInput.getOutId();
         Integer packageCount = addPackageInput.getPackageCount();
 
