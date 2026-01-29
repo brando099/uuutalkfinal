@@ -21,8 +21,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.time.Duration;
-import java.time.LocalDateTime;
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -129,22 +128,9 @@ public class TaskController extends ControllerBase {
 
     @ApiOperation("添加好友")
     @GetMapping("/addFriends")
-    public Response addFriends(String groupId, String remark, String uid) {
+    public Response addFriends(String groupId, String remark, String uid) throws IOException, InterruptedException {
         log.info("groupId: {}, remark: {}, uid: {}", groupId, remark, uid);
-
-        if (!Boolean.TRUE.equals(redisTemplate.opsForValue().setIfAbsent("addFriends:" + uid, LocalDateTime.now().toString(), Duration.ofDays(10)))) {
-            throw new BizzRuntimeException("上次任务还没有执行完成");
-        }
-        try {
-            taskService.addFriends(groupId, remark, uid);
-        } catch (BizzRuntimeException be) {
-            log.error("业务异常", be);
-            throw be;
-        } catch (Exception e) {
-            log.error("系统异常", e);
-        } finally {
-            redisTemplate.delete("addFriends:" + uid);
-        }
+        taskService.addFriends(groupId, remark, uid);
         return Response.success();
     }
 }

@@ -44,6 +44,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
@@ -398,13 +400,27 @@ public class TaskServiceImpl implements TaskService {
         if (CollectionUtils.isEmpty(uuuGroupMemberDTOS)) {
             throw new BizzRuntimeException("拉取群成员为空");
         }
-        log.info("群数量: {}", uuuGroupMemberDTOS.size());
         int addWait = Integer.parseInt(systemConfigsMapper.getByKey("add_friend_wait").getValue());
+        log.info("群数量: {}, 等待时长: {}s", uuuGroupMemberDTOS.size(), addWait);
+        if (!Boolean.TRUE.equals(redisTemplate1.opsForValue().setIfAbsent("addFriends:" + uid, LocalDateTime.now().toString(), Duration.ofDays(10)))) {
+            throw new BizzRuntimeException("上次任务还没有执行完成");
+        }
+        taskService.addFriendsExecute(groupId, remark, uid, uuuGroupMemberDTOS, token, addWait);
+    }
+
+    @Override
+    @Async("asyncTaskExecutor")
+    public void addFriendsExecute(String groupId, String remark, String uid, List<UUUGroupMemberDTO> uuuGroupMemberDTOS, String token, Integer addWait) throws InterruptedException {
         for (UUUGroupMemberDTO uuuGroupMemberDTO : uuuGroupMemberDTOS) {
             try {
                 String to_uid = uuuGroupMemberDTO.getUid();
                 if (to_uid.equals(uid)) {
                     log.info("本人不需要添加, to_uid: {}", to_uid);
+                    continue;
+                }
+                Object o = redisTemplate1.opsForValue().get("MyFriends:" + uid + ":" + to_uid);
+                if (o != null) {
+                    log.info("已经添加过该好友了");
                     continue;
                 }
                 UUUGroupMemberDTO dto = uuutalkApiClient.getUserInfo(groupId, token, to_uid);
@@ -423,14 +439,21 @@ public class TaskServiceImpl implements TaskService {
                 String addUid = searchDTO.getUid();
 
                 JSONObject result = uuutalkApiClient.friendApply(addUid, vercode, token, remark);
-                log.info("添加好友结果: {}", result);
+                log.info("添加好友结果: {}", result.toJSONString());
+                if ("200".equals(result.getString("status"))) {
+                    redisTemplate1.opsForValue().set("MyFriends:" + uid + ":" + to_uid, LocalDate.now().toString());
+                } else {
+                    log.info("添加失败: {}", result.toJSONString());
+                }
             } catch (Exception e) {
                 log.error("", e);
             }
             Thread.sleep(addWait * 1000L);
         }
-        log.info("添加好友执行完成, uid: {}", uid);
+        log.info("添加好友完成, uid: {}", uid);
+        redisTemplate1.delete("addFriends:" + uid);
     }
+
     public static void main(String[] args) {
         String smeta = """
 {"header":{"sm":1,"ver":10,"uid":"{uid}","cmdtype":"g.smeta"},"body":{"marks":null}}
@@ -438,5 +461,12 @@ public class TaskServiceImpl implements TaskService {
         System.out.println(smeta);
         System.out.println("111");
         System.out.println();
+
+        JSONObject json = new JSONObject();
+        json.put("header", 200);
+        System.out.println(json.toJSONString());
+        System.out.println(json.toString());
+
+
     }
 }
