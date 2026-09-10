@@ -22,6 +22,7 @@ public class SysUser  {
      */
     @ApiModelProperty(notes = "用户名")
     private String username;
+    private String parentUsername;
     /**
      * 密码
      */

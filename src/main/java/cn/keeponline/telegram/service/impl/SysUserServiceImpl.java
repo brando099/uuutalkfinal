@@ -28,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 
 import java.io.File;
@@ -96,6 +97,7 @@ public class SysUserServiceImpl implements SysUserService {
      * @return 实例对象
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public SysUser insert(SysUserInsertInput sysUserInsertInput) {
         String username = sysUserInsertInput.getUsername();
         SysUser sysUserInDB = sysUserMapper.getByOutId(username);
@@ -119,6 +121,8 @@ public class SysUserServiceImpl implements SysUserService {
         for (int i = 0; i < packageCount; i++) {
             UserPackage userPackage = new UserPackage();
             userPackage.setAccountId(username);
+            userPackage.setPackageName(StrUtil.isBlank(sysUserInsertInput.getPackageName())
+                    ? "普通套餐" : sysUserInsertInput.getPackageName().trim());
             LocalDateTime now = LocalDateTime.now();
             LocalDateTime localDateTime = now.plusDays(validDays);
             Date expireTime = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());

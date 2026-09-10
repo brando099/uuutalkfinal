@@ -11,7 +11,6 @@
         <if test="status != null">
             and status = #{status}
         </if>
-        and expire_time > now()
     </select>
 
     <select id="listByAccountIdAndStatus" resultType="cn.keeponline.telegram.entity.UserPackage">

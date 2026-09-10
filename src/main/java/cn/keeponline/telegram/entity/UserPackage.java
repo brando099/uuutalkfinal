@@ -12,6 +12,7 @@ public class UserPackage {
     private Long id;
     private String uid;
     private String accountId;
+    private String packageName;
     private Integer status;
     private Date expireTime;
     private Date createTime;

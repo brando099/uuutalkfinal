@@ -7,5 +7,6 @@ public class AddPackageInput {
     private String outId;
     private Integer packageCount;
     private String durationType = "month";// day month
-    private Integer duration = 15;
+    private Integer duration;
+    private String packageName;
 }

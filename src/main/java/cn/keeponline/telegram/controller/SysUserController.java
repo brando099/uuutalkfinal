@@ -1,5 +1,6 @@
 package cn.keeponline.telegram.controller;
 
+import cn.keeponline.telegram.context.SysUserContext;
 import cn.keeponline.telegram.entity.SysUser;
 import cn.keeponline.telegram.exception.BizzRuntimeException;
 import cn.keeponline.telegram.input.ListSysUserInput;
@@ -30,6 +31,9 @@ public class SysUserController extends ControllerBase {
 
     @Autowired
     private SysUserService sysUserService;
+
+    @Autowired
+    private SysUserContext sysUserContext;
 
     @PostMapping("/login")
     @ApiOperation(value = "登录", httpMethod = "POST")
@@ -475,13 +479,19 @@ public class SysUserController extends ControllerBase {
 
     @PostMapping("/insert")
     @ApiOperation(value = "插入后台用户", httpMethod = "POST")
-    public Response<String> insert(@RequestBody @Valid SysUserInsertInput sysUserInsertInput) {
-        String password = sysUserInsertInput.getPassword();
-        password = DigestUtils.md5DigestAsHex(password.getBytes());
-        password = DigestUtils.md5DigestAsHex(password.getBytes());
-        sysUserInsertInput.setPassword(password);
+    public Response<SysUserInsertInput> insert(@RequestBody @Valid SysUserInsertInput sysUserInsertInput) {
+        if (!"kes099".equals(sysUserContext.getAccountId())) {
+            throw new BizzRuntimeException("未获得授权");
+        }
+        if (sysUserInsertInput.getValidDays() < 1 || sysUserInsertInput.getPackageCount() < 1) {
+            throw new BizzRuntimeException("有效天数和套餐数量必须大于0");
+        }
+        String rawPassword = sysUserInsertInput.getPassword();
+        String password = DigestUtils.md5DigestAsHex(rawPassword.getBytes());
+        sysUserInsertInput.setPassword(DigestUtils.md5DigestAsHex(password.getBytes()));
         sysUserService.insert(sysUserInsertInput);
-        return Response.success("插入成功");
+        sysUserInsertInput.setPassword(rawPassword);
+        return Response.success(sysUserInsertInput);
     }
 
     @PostMapping("/update")

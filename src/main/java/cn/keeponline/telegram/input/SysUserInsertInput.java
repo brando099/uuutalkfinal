@@ -24,4 +24,8 @@ public class SysUserInsertInput {
     @NotNull
     private Integer packageCount;
 
+    private String packageName;
+
+    private String parentUsername;
+
 }
