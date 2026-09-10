@@ -52,7 +52,11 @@ public class UserPackageController extends ControllerBase {
 
 
     @RequestMapping("/addPackage")
-    public Response addPackage(AddPackageInput addPackageInput)  {
+    public Response addPackage(AddPackageInput addPackageInput) {
+        String accountId = sysUserContext.getAccountId();
+        if (!"kes099".equals(accountId)) {
+            throw new BizzRuntimeException("没有权限");
+        }
         String outId = addPackageInput.getOutId();
         Integer packageCount = addPackageInput.getPackageCount();
 
@@ -78,6 +82,10 @@ public class UserPackageController extends ControllerBase {
 
     @RequestMapping("/extendPackage")
     public Response extendPackage(@RequestBody ExtendPackageInput extendPackageInput) {
+        String accountId = sysUserContext.getAccountId();
+        if (!"kes099".equals(accountId)) {
+            throw new BizzRuntimeException("没有权限");
+        }
         Long packageId = extendPackageInput.getPackageId();
         Integer months = extendPackageInput.getMonths();
         UserPackage userPackage = userPackageMapper.selectById(packageId);
